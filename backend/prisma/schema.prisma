@@ -1,0 +1,138 @@
+// MyFavor — Magic Link (邮箱) 云同步
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  // 改为 "postgresql" 时切换生产数据库
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String         @id @default(cuid())
+  email         String         @unique  // 邮箱(Magic Link 主键)
+  name          String?
+  createdAt     DateTime       @default(now())
+  lastLoginAt   DateTime       @default(now())
+  deletedAt     DateTime?      // 软删除账号
+
+  ledgerBooks   LedgerBook[]
+  contacts      Contact[]
+  transactions  Transaction[]
+  reminders     Reminder[]
+}
+
+/// Magic Link 一次性 token + 6 位验证码
+model MagicToken {
+  id         String   @id @default(cuid())
+  email      String
+  token      String   @unique  // 长随机串,用于邮件链接
+  code       String              // 6 位数字,用于在 App 中手动输入
+  expiresAt  DateTime
+  usedAt     DateTime?
+  ip         String?             // 发起 IP(防刷)
+  userAgent  String?
+  createdAt  DateTime @default(now())
+
+  @@index([email, createdAt])
+  @@index([token])
+  @@index([code])
+}
+
+model LedgerBook {
+  id            String    @id @default(cuid())
+  clientId      String    // 客户端 UUID(同一用户唯一)
+  userId        String
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  title         String
+  categoryRaw   String
+  directionRaw  String
+  eventDate     DateTime
+  note          String    @default("")
+  coverColorHex String    @default("#FF6B6B")
+  isClosed      Boolean   @default(false)
+
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  deletedAt     DateTime? // 软删除(用于同步)
+
+  transactions  Transaction[]
+
+  @@unique([userId, clientId])
+  @@index([userId, updatedAt])
+}
+
+model Contact {
+  id              String    @id @default(cuid())
+  clientId        String
+  userId          String
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  name            String
+  pinyinInitial   String    @default("#")
+  phone           String    @default("")
+  relationshipRaw String    @default("朋友")
+  avatarEmoji    String    @default("🙂")
+  note            String    @default("")
+  birthday        DateTime?
+
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  deletedAt       DateTime?
+
+  transactions    Transaction[]
+
+  @@unique([userId, clientId])
+  @@index([userId, updatedAt])
+}
+
+model Transaction {
+  id              String    @id @default(cuid())
+  clientId        String
+  userId          String
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  bookClientId    String?
+  bookId          String?
+  book            LedgerBook? @relation(fields: [bookId], references: [id], onDelete: SetNull)
+  contactClientId String?
+  contactId       String?
+  contact         Contact?    @relation(fields: [contactId], references: [id], onDelete: SetNull)
+
+  amount          Decimal
+  giftKindRaw     String    @default("礼金")
+  itemDescription String    @default("")
+  date            DateTime
+  note            String    @default("")
+
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  deletedAt       DateTime?
+
+  @@unique([userId, clientId])
+  @@index([userId, updatedAt])
+}
+
+model Reminder {
+  id            String    @id @default(cuid())
+  clientId      String
+  userId        String
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  title         String
+  date          DateTime
+  useLunar      Boolean   @default(false)
+  advanceDays   Int       @default(7)
+  note          String    @default("")
+  colorHex      String    @default("#FF6B6B")
+  isEnabled     Boolean   @default(true)
+
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  deletedAt     DateTime?
+
+  @@unique([userId, clientId])
+  @@index([userId, updatedAt])
+}
