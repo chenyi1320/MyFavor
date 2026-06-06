@@ -42,7 +42,8 @@ actor APIClient {
     #if DEBUG
     let baseURL = URL(string: "http://localhost:3000")!
     #else
-    let baseURL = URL(string: "https://api.myfavor.app")!
+    // ⚠️ 部署到 Render 后改成你的实际 URL
+    let baseURL = URL(string: "https://myfavor-api-xxxx.onrender.com")!
     #endif
     
     private let session: URLSession
