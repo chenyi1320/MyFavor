@@ -100,20 +100,27 @@ jobs:
       
       - name: 导出 IPA
         run: |
-          # 已经在 build 目录(刚才 ExportOptions.plist 创建在这)
+          set -e
           cd build
+          # 不再 2>&1 | tail(会丢 exit code),改成显示完整输出
           xcodebuild -exportArchive \
             -archivePath MyFavor.xcarchive \
             -exportPath . \
-            -exportOptionsPlist ExportOptions.plist 2>&1 | tail -20
+            -exportOptionsPlist ExportOptions.plist
 
           # 列出产物
-          ls -la *.ipa 2>/dev/null || echo "❌ IPA 未生成"
-      
+          echo "--- build 目录内容 ---"
+          ls -la
+          echo "--- IPA 文件 ---"
+          ls -la *.ipa 2>/dev/null || { echo "❌ IPA 未生成"; exit 1; }
+
       - name: 上传 IPA 为 Artifact
         uses: actions/upload-artifact@v4
         with:
           name: MyFavor-unsigned
-          path: MyFavor/build/*.ipa
+          # 用 find 找所有 .ipa(包括子目录)
+          path: |
+            MyFavor/build/*.ipa
+            MyFavor/build/**/*.ipa
           if-no-files-found: error
           retention-days: 30
