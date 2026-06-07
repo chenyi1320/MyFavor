@@ -13,7 +13,8 @@
       "Bash(chmod +x deploy-aliyun-mysql.sh)",
       "Bash(curl -sI --max-time 8 http://39.105.106.86)",
       "Bash(nc -z -w 5 39.105.106.86 22)",
-      "Bash(curl -s --max-time 8 \"https://ipapi.co/39.105.106.86/json/\")"
+      "Bash(curl -s --max-time 8 \"https://ipapi.co/39.105.106.86/json/\")",
+      "Bash(curl -s --max-time 10 \"https://api.github.com/repos/chenyi1320/MyFavor/actions/runs?per_page=3\" -o runs.json)"
     ]
   }
 }

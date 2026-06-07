@@ -37,8 +37,8 @@ jobs:
         with:
           node-version: '20.x'
 
-      - name: 装依赖
-        run: npm install --omit=dev --no-audit
+      - name: 装依赖(包含 devDependencies,因为 prisma 在 devDeps)
+        run: npm install --no-audit --include=dev
       
       - name: 生成 Prisma Client
         run: npx prisma generate
