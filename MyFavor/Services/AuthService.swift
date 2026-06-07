@@ -32,20 +32,6 @@ final class AuthService {
     /// 当前用户
     private(set) var currentUser: AuthUser?
     
-    private init() {
-        loadFromKeychain()
-        
-        // 监听 401 失效
-        NotificationCenter.default.addObserver(
-            forName: .authDidExpire, object: nil, queue: .main
-        ) { [weak self] _ in
-            guard let self else { return }
-            Task { @MainActor in
-                self.logout(notify: false)
-            }
-        }
-    }
-    
     private func loadFromKeychain() {
         guard let token = KeychainHelper.shared.read(.jwtToken),
               !token.isEmpty,

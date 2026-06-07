@@ -109,10 +109,10 @@ final class MagicLinkService {
         resendCountdown = 60
         timer?.invalidate()
         timer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] t in
-            // 用 Task { @MainActor in } 包装所有属性修改
-            // (Timer 闭包是 @Sendable,resendCountdown 是 MainActor 隔离)
+            // 关键:在 Task 外先解包 self(避免 Swift 6 并发捕获警告)
+            guard let self else { t.invalidate(); return }
+            // 现在 self 是局部常量,Task 安全捕获
             Task { @MainActor in
-                guard let self else { t.invalidate(); return }
                 self.resendCountdown -= 1
                 if self.resendCountdown <= 0 {
                     t.invalidate()
