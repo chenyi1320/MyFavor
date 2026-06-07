@@ -40,10 +40,10 @@ actor APIClient {
     
     /// 后端基地址 — 切换 dev/prod
     #if DEBUG
-    let baseURL = URL(string: "http://localhost:3000")!
+    let baseURL = URL(string: "http://39.105.106.86:3000")!
     #else
-    // ⚠️ 部署到 Render 后改成你的实际 URL
-    let baseURL = URL(string: "https://myfavor-api-xxxx.onrender.com")!
+    // 生产:阿里云 ECS 部署
+    let baseURL = URL(string: "http://39.105.106.86:3000")!
     #endif
     
     private let session: URLSession

@@ -10,7 +10,10 @@
       "Read(//c/Users/15187/AppData/Local/Temp/claude/c--Users-15187-my-project-MyFavor/a3e0dbaf-ca41-4c87-b078-b282d04c9a43/tasks/**)",
       "Bash(npx prisma *)",
       "Bash(> deploy-aliyun-mysql.sh)",
-      "Bash(chmod +x deploy-aliyun-mysql.sh)"
+      "Bash(chmod +x deploy-aliyun-mysql.sh)",
+      "Bash(curl -sI --max-time 8 http://39.105.106.86)",
+      "Bash(nc -z -w 5 39.105.106.86 22)",
+      "Bash(curl -s --max-time 8 \"https://ipapi.co/39.105.106.86/json/\")"
     ]
   }
 }
