@@ -155,7 +155,7 @@ struct StatsView: View {
                     Text(Fmt.amountOnly(row.outgoing)).frame(width: 80, alignment: .trailing).foregroundStyle(.brandTeal)
                     Text(Fmt.amountOnly(row.incoming - row.outgoing))
                         .frame(width: 80, alignment: .trailing)
-                        .foregroundStyle((row.incoming - row.outgoing) >= 0 ? .primary : .brandTeal)
+                        .foregroundStyle((row.incoming - row.outgoing) >= 0 ? Color.primary : .brandTeal)
                 }
                 .font(.caption)
                 .padding(.horizontal).padding(.vertical, 8)
