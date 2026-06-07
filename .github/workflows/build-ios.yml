@@ -139,8 +139,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: MyFavor-unsigned
-          # 用绝对路径(GITHUB_WORKSPACE 是 repo 根)
-          # 之前用相对路径一直报"找不到",v4 的相对路径解析有 bug
-          path: ${{ github.workspace }}/MyFavor/build/MyFavor-unsigned.ipa
+          # 用绝对路径。GITHUB_WORKSPACE 已经是 /MyFavor(repo 根),
+          # 所以路径是 /MyFavor/build/MyFavor-unsigned.ipa(不带前缀 MyFavor/)
+          # 之前多加了一个 MyFavor/ 导致路径变 /MyFavor/MyFavor/build/...
+          path: ${{ github.workspace }}/build/MyFavor-unsigned.ipa
           if-no-files-found: error
           retention-days: 30
