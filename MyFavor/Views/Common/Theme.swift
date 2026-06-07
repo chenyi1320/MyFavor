@@ -7,6 +7,29 @@
 
 import SwiftUI
 
+/// ShapeStyle 扩展 — 让 `.brandRed` 等可在 .foregroundStyle() 中用
+extension ShapeStyle where Self == Color {
+    static var brandRed: Color { Color.brandRed }
+    static var brandRedDeep: Color { Color.brandRedDeep }
+    static var brandRedSoft: Color { Color.brandRedSoft }
+    static var brandTeal: Color { Color.brandTeal }
+    static var brandGold: Color { Color.brandGold }
+    static var cardBackground: Color { Color.cardBackground }
+    static var pageBackground: Color { Color.pageBackground }
+    static var secondaryText: Color { Color.secondaryText }
+}
+
+/// 品牌渐变(也作为 ShapeStyle 暴露)
+extension ShapeStyle where Self == LinearGradient {
+    static var brandGradient: LinearGradient {
+        LinearGradient(
+            colors: [Color.brandRed, Color.brandRedDeep],
+            startPoint: .topLeading,
+            endPoint: .bottomTrailing
+        )
+    }
+}
+
 extension Color {
     /// 品牌主色 — 珊瑚红(对标人情账簿)
     static let brandRed = Color(hex: "#FF6B6B")

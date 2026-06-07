@@ -18,7 +18,11 @@
       "Bash(> .github/workflows/deploy.yml)",
       "Bash(grep -n \"MyFavor/\\\\${{\" .github/workflows/build-ios.yml)",
       "Bash(curl -s \"https://api.github.com/repos/chenyi1320/MyFavor/actions/runs/27091875577\" -o run.json)",
-      "Bash(curl -s \"https://api.github.com/repos/chenyi1320/MyFavor/actions/runs/27091875577/artifacts\" -o arts.json)"
+      "Bash(curl -s \"https://api.github.com/repos/chenyi1320/MyFavor/actions/runs/27091875577/artifacts\" -o arts.json)",
+      "Bash(sed -n '125,135p' MyFavor/Views/Auth/LoginView.swift)",
+      "Bash(sed -n '234,242p' MyFavor/Views/Auth/LoginView.swift)",
+      "Bash(sed -n '82,90p' MyFavor/Views/BookDetail/BookDetailView.swift)",
+      "Bash(sed -n '34,45p' MyFavor/Views/BookDetail/AddTransactionSheet.swift)"
     ]
   }
 }
