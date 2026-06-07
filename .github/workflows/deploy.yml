@@ -37,12 +37,15 @@ jobs:
         with:
           node-version: '20.x'
 
-      - name: 装依赖(包含 devDependencies,因为 prisma 在 devDeps)
-        run: npm install --no-audit --include=dev
-      
-      - name: 生成 Prisma Client
-        run: npx prisma generate
-      
+      - name: 装依赖
+        run: npm install --no-audit
+
+      - name: 验证 Prisma 5.x 已装
+        run: npx prisma --version
+
+      - name: 生成 Prisma Client(用本地二进制)
+        run: ./node_modules/.bin/prisma generate
+
       - name: TypeScript 类型检查 + 编译
         run: npm run build
 
