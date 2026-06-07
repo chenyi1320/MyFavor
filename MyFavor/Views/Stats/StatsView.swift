@@ -130,7 +130,10 @@ struct StatsView: View {
     }
     
     private var tableCard: some View {
-        VStack(alignment: .leading, spacing: 0) {
+        // 显式存为 let,让编译器看清是 [StatsRow] 不是 Binding
+        let rows: [StatsRow] = tableRows
+
+        return VStack(alignment: .leading, spacing: 0) {
             Text("收送统计表").font(.headline).padding()
             HStack {
                 Text(headerLabel).frame(width: 80, alignment: .leading)
@@ -143,8 +146,8 @@ struct StatsView: View {
             .foregroundStyle(.secondary)
             .padding(.horizontal)
             Divider()
-            ForEach(tableRows.indices, id: \.self) { idx in
-                let row = tableRows[idx]
+            // 直接用数组本身(ForEach over Identifiable 或带 id)
+            ForEach(Array(rows.enumerated()), id: \.offset) { index, row in
                 HStack {
                     Text(row.label).frame(width: 80, alignment: .leading)
                     Spacer()
