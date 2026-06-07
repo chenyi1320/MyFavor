@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(curl -sL --max-time 12 -A \"Mozilla/5.0\" \"https://hn.algolia.com/api/v1/search?query=glitch+free+tier+2025\" -o hn.json)",
+      "Bash(python -c ' *)",
+      "Bash(curl -sL --max-time 12 \"https://hn.algolia.com/api/v1/search?query=glitch\" -o hn.json)",
+      "Bash(curl -sL --max-time 12 \"https://hn.algolia.com/api/v1/search?query=glitch.com\" -o hn.json)",
+      "Bash(curl -sL --max-time 12 \"https://hn.algolia.com/api/v1/search?query=post-glitch\" -o hn.json)",
+      "Bash(sleep 30 *)",
+      "Read(//c/Users/15187/AppData/Local/Temp/claude/c--Users-15187-my-project-MyFavor/a3e0dbaf-ca41-4c87-b078-b282d04c9a43/tasks/**)",
+      "Bash(npx prisma *)"
+    ]
+  }
+}
