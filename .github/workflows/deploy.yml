@@ -74,22 +74,20 @@ jobs:
             echo "📦 [2/6] 装依赖(国内镜像)..."
             cd backend
             npm config set registry https://registry.npmmirror.com
-            npm install --omit=dev --no-audit
-            
-            # 3. 显式安装 prisma 5.x(因为是 dependencies)
-            echo "📌 [3/6] 确保 prisma 5.x 已装..."
-            npm install prisma@5.18.0 --omit=dev --no-audit 2>/dev/null || true
-            
-            # 4. 同步数据库 schema
-            echo "🗄️ [4/6] 同步数据库 schema..."
-            npx prisma db push --skip-generate --accept-data-loss 2>&1 | tail -5 || echo "⚠️ db push 跳过"
-            
-            # 5. 编译
-            echo "🔨 [5/6] 编译 TypeScript..."
-            npx tsc
-            
-            # 6. 重启
-            echo "🔄 [6/6] 重启后端..."
+            # 装全部(包含 devDependencies:prisma/typescript/tsx),服务器自己 build
+            npm install --no-audit
+
+            # 3. 同步数据库 schema
+            echo "🗄️ [3/6] 同步数据库 schema..."
+            ./node_modules/.bin/prisma db push --skip-generate --accept-data-loss 2>&1 | tail -5 || echo "⚠️ db push 跳过"
+
+            # 4. 编译(用本地 tsc)
+            echo "🔨 [4/6] 编译 TypeScript..."
+            ./node_modules/.bin/tsc
+
+
+            # 5. 重启
+            echo "🔄 [5/6] 重启后端..."
             pm2 delete myfavor-api 2>/dev/null || true
             pm2 start dist/server.js --name myfavor-api
             pm2 save
