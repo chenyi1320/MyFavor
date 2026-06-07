@@ -7,12 +7,25 @@
 
 import Foundation
 
-@MainActor
 @Observable
 final class AuthService {
-    /// 单例 — 用 nonisolated(unsafe) 绕过 Swift 6 静态属性必须隔离的限制
-    /// (init 内部全在 MainActor 上下文,所以实际安全)
-    nonisolated(unsafe) static let shared = AuthService()
+    /// 单例:把 @MainActor 加在 static let 上而不是 class 上
+    /// 这样 init 不需要 actor 隔离,但属性访问需要 MainActor
+    @MainActor static let shared = AuthService()
+
+    private init() {
+        loadFromKeychain()
+
+        // 监听 401 失效
+        NotificationCenter.default.addObserver(
+            forName: .authDidExpire, object: nil, queue: .main
+        ) { [weak self] _ in
+            guard let self else { return }
+            Task { @MainActor in
+                self.logout(notify: false)
+            }
+        }
+    }
     
     /// 当前是否已登录
     private(set) var isLoggedIn: Bool = false
