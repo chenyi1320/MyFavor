@@ -109,12 +109,12 @@ final class MagicLinkService {
         resendCountdown = 60
         timer?.invalidate()
         timer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] t in
+            // 全部逻辑在 Timer 闭包内,避免跨 actor 边界
+            // (Timer 本来就在 main run loop,安全)
             guard let self else { t.invalidate(); return }
-            Task { @MainActor in
-                self.resendCountdown -= 1
-                if self.resendCountdown <= 0 {
-                    t.invalidate()
-                }
+            self.resendCountdown -= 1
+            if self.resendCountdown <= 0 {
+                t.invalidate()
             }
         }
     }

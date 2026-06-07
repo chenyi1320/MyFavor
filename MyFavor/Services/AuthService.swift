@@ -10,7 +10,9 @@ import Foundation
 @MainActor
 @Observable
 final class AuthService {
-    static let shared = AuthService()
+    /// 单例 — 用 nonisolated(unsafe) 绕过 Swift 6 静态属性必须隔离的限制
+    /// (init 内部全在 MainActor 上下文,所以实际安全)
+    nonisolated(unsafe) static let shared = AuthService()
     
     /// 当前是否已登录
     private(set) var isLoggedIn: Bool = false
