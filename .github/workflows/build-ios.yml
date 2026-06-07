@@ -59,13 +59,14 @@ jobs:
           fi
       
       - name: 列出 schemes
-        run: xcodebuild -list -project MyFavor/${{ env.PROJECT }}
-      
+        run: xcodebuild -list -project ${{ env.PROJECT }}
+
       - name: 编译并生成 IPA
         run: |
-          cd MyFavor
+          # PROJECT env 是 'MyFavor.xcodeproj'(在仓库根)
+          # 所以从仓库根跑,不去 cd 子目录
           mkdir -p build
-          
+
           # Archive
           xcodebuild \
             -project ${{ env.PROJECT }} \
@@ -83,15 +84,14 @@ jobs:
       
       - name: 创建 ExportOptions.plist
         run: |
-          cat > MyFavor/build/ExportOptions.plist <<EOF
+          # build 在仓库根(刚才从根跑 archive)
+          cat > build/ExportOptions.plist <<EOF
           <?xml version="1.0" encoding="UTF-8"?>
           <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
           <plist version="1.0">
           <dict>
               <key>method</key>
               <string>development</string>
-              <key>teamID</key>
-              <string>YOUR_APPLE_TEAM_ID</string>
               <key>destination</key>
               <string>export</string>
           </dict>
@@ -100,12 +100,13 @@ jobs:
       
       - name: 导出 IPA
         run: |
-          cd MyFavor/build
+          # 已经在 build 目录(刚才 ExportOptions.plist 创建在这)
+          cd build
           xcodebuild -exportArchive \
             -archivePath MyFavor.xcarchive \
             -exportPath . \
             -exportOptionsPlist ExportOptions.plist 2>&1 | tail -20
-          
+
           # 列出产物
           ls -la *.ipa 2>/dev/null || echo "❌ IPA 未生成"
       
