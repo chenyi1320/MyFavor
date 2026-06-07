@@ -8,12 +8,13 @@
 import SwiftUI
 import SwiftData
 
+@MainActor
 struct ProfileView: View {
     @Environment(\.modelContext) private var context
     @Query private var books: [LedgerBook]
     @Query private var contacts: [Contact]
     @Query private var reminders: [Reminder]
-    
+
     @State private var auth = AuthService.shared
     @State private var sync = SyncEngine.shared
     @State private var showLogin = false

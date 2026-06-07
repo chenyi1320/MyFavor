@@ -9,6 +9,7 @@ import SwiftUI
 import SwiftData
 
 @main
+@MainActor
 struct MyFavorApp: App {
     /// 全局 SwiftData 容器
     let container: ModelContainer = {

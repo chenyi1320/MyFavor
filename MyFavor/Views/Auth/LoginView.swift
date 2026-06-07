@@ -7,6 +7,7 @@
 
 import SwiftUI
 
+@MainActor
 struct LoginView: View {
     @State private var auth  = AuthService.shared
     @State private var magic = MagicLinkService.shared
