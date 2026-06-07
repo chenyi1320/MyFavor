@@ -72,6 +72,8 @@ cd backend
 echo "装依赖..."
 npm install --omit=dev
 npx prisma generate
+echo "推送 schema 到数据库(创建表)..."
+npx prisma db push --skip-generate
 echo "编译 TypeScript..."
 npm run build
 
