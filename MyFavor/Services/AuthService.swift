@@ -24,8 +24,9 @@ final class AuthService {
         NotificationCenter.default.addObserver(
             forName: .authDidExpire, object: nil, queue: .main
         ) { [weak self] _ in
+            guard let self else { return }
             Task { @MainActor in
-                self?.logout(notify: false)
+                self.logout(notify: false)
             }
         }
     }
