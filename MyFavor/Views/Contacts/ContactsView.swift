@@ -206,7 +206,7 @@ struct AddContactSheet: View {
     
     @State private var name = ""
     @State private var phone = ""
-    @State private var relationship: Relationship = .friend
+    @State private var relationship: ContactRelation = .friend
     @State private var emoji = "🙂"
     
     private let emojiChoices = ["🙂","🧑","👨","👩","👴","👵","🧒","👶","🧔"]
@@ -219,7 +219,7 @@ struct AddContactSheet: View {
                     TextField("手机号", text: $phone)
                         .keyboardType(.phonePad)
                     Picker("关系", selection: $relationship) {
-                        ForEach(Relationship.allCases) { r in
+                        ForEach(ContactRelation.allCases) { r in
                             Text(r.rawValue).tag(r)
                         }
                     }

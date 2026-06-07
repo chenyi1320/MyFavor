@@ -16,7 +16,9 @@
       "Bash(curl -s --max-time 8 \"https://ipapi.co/39.105.106.86/json/\")",
       "Bash(curl -s --max-time 10 \"https://api.github.com/repos/chenyi1320/MyFavor/actions/runs?per_page=3\" -o runs.json)",
       "Bash(> .github/workflows/deploy.yml)",
-      "Bash(grep -n \"MyFavor/\\\\${{\" .github/workflows/build-ios.yml)"
+      "Bash(grep -n \"MyFavor/\\\\${{\" .github/workflows/build-ios.yml)",
+      "Bash(curl -s \"https://api.github.com/repos/chenyi1320/MyFavor/actions/runs/27091875577\" -o run.json)",
+      "Bash(curl -s \"https://api.github.com/repos/chenyi1320/MyFavor/actions/runs/27091875577/artifacts\" -o arts.json)"
     ]
   }
 }

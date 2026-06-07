@@ -81,7 +81,8 @@ enum GiftKind: String, Codable, CaseIterable, Identifiable {
 }
 
 /// 联系人关系分组
-enum Relationship: String, Codable, CaseIterable, Identifiable {
+/// (注:重命名为 ContactRelation,避免与 SwiftData 的 @Relationship 宏冲突)
+enum ContactRelation: String, Codable, CaseIterable, Identifiable {
     case family    = "家人"
     case relative  = "亲戚"
     case friend    = "朋友"
@@ -89,6 +90,6 @@ enum Relationship: String, Codable, CaseIterable, Identifiable {
     case colleague = "同事"
     case neighbor  = "邻居"
     case other     = "其他"
-    
+
     var id: String { rawValue }
 }

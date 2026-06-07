@@ -48,7 +48,10 @@ struct RootTabView: View {
             } label: {
                 ZStack {
                     Circle()
-                        .fill(BrandGradient())
+                        .fill(LinearGradient(
+                            colors: [Color.brandRed, Color.brandRedDeep],
+                            startPoint: .topLeading, endPoint: .bottomTrailing
+                        ))
                         .frame(width: 58, height: 58)
                         .shadow(color: .brandRed.opacity(0.45), radius: 10, x: 0, y: 4)
                     Image(systemName: "plus")

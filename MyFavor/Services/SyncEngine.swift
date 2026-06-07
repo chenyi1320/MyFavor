@@ -198,7 +198,7 @@ final class SyncEngine {
             local.name = dto.name
             local.pinyinInitial = dto.pinyinInitial
             local.phone = dto.phone
-            local.relationship = Relationship(rawValue: dto.relationshipRaw) ?? .friend
+            local.relationship = ContactRelation(rawValue: dto.relationshipRaw) ?? .friend
             local.avatarEmoji = dto.avatarEmoji
             local.note = dto.note
             local.birthday = dto.birthday
@@ -210,7 +210,7 @@ final class SyncEngine {
                 name: dto.name,
                 pinyinInitial: dto.pinyinInitial,
                 phone: dto.phone,
-                relationship: Relationship(rawValue: dto.relationshipRaw) ?? .friend,
+                relationship: ContactRelation(rawValue: dto.relationshipRaw) ?? .friend,
                 avatarEmoji: dto.avatarEmoji,
                 note: dto.note,
                 birthday: dto.birthday

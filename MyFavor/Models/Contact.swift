@@ -18,7 +18,7 @@ final class Contact {
     /// 手机号(可选)
     var phone: String = ""
     /// 关系
-    var relationship: Relationship = Relationship.friend
+    var relationship: ContactRelation = ContactRelation.friend
     /// 头像 emoji
     var avatarEmoji: String = "🙂"
     /// 备注
@@ -43,7 +43,7 @@ final class Contact {
         name: String,
         pinyinInitial: String = "#",
         phone: String = "",
-        relationship: Relationship = .friend,
+        relationship: ContactRelation = .friend,
         avatarEmoji: String = "🙂",
         note: String = "",
         birthday: Date? = nil
