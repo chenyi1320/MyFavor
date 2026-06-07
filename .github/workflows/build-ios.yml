@@ -130,9 +130,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: MyFavor-unsigned
-          # 用 find 找所有 .ipa(包括子目录)
-          path: |
-            MyFavor/build/*.ipa
-            MyFavor/build/**/*.ipa
+          # 明确路径,不用 glob(更可靠)
+          path: MyFavor/build/MyFavor-unsigned.ipa
           if-no-files-found: error
           retention-days: 30
