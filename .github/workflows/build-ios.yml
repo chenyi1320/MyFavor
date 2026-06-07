@@ -100,28 +100,40 @@ jobs:
       
       - name: 手动打包成 IPA(跳过 xcodebuild -exportArchive,它需要 Team)
         run: |
-          set -e
-          # archive 完成后,MyFavor.app 在:
-          #   build/MyFavor.xcarchive/Products/Applications/MyFavor.app
-          # 我们手动在 build/ 目录创建 Payload/,然后 zip 成 IPA
+          set -ex  # -e: 出错立即退出  -x: 打印每条命令
 
+          echo "=== PWD ==="
+          pwd
+
+          echo "=== build 目录 ==="
+          ls -la build/ 2>&1 | head -20 || { echo "❌ build/ 不存在"; exit 1; }
+
+          echo "=== MyFavor.xcarchive/Products/Applications ==="
+          ls -la build/MyFavor.xcarchive/Products/Applications/ 2>&1 | head || { echo "❌ xcarchive 找不到"; exit 1; }
+
+          echo "=== .app 内部 ==="
+          ls build/MyFavor.xcarchive/Products/Applications/MyFavor.app/ 2>&1 | head -10 || { echo "❌ .app 找不到"; exit 1; }
+
+          echo "=== 创建 Payload ==="
           cd build
-          echo "--- 验证 .app 存在 ---"
-          ls -la MyFavor.xcarchive/Products/Applications/MyFavor.app/ | head -10
-
-          echo "--- 创建 Payload 结构 ---"
           mkdir -p Payload
           cp -r MyFavor.xcarchive/Products/Applications/MyFavor.app Payload/
+          ls -la Payload/
 
-          echo "--- 打包成 IPA ---"
-          # 排除 .DS_Store 等 macOS 垃圾文件
-          zip -r MyFavor-unsigned.ipa Payload/ -x "*.DS_Store" -q
+          echo "=== 用 zip 打包 ==="
+          # 不加 -q,这样能看 zip 输出
+          zip -r MyFavor-unsigned.ipa Payload/ -x "*.DS_Store"
 
-          echo "--- 验证 IPA ---"
+          echo "=== 验证 IPA 文件 ==="
           ls -la MyFavor-unsigned.ipa
-          file MyFavor-unsigned.ipa || true
-          # 验证:unzip 列出 Payload
-          unzip -l MyFavor-unsigned.ipa | head -10
+          echo "--- file 类型 ---"
+          file MyFavor-unsigned.ipa
+          echo "--- unzip 验证 ---"
+          unzip -l MyFavor-unsigned.ipa | head -20
+
+          echo "=== 全部完成 ==="
+          pwd
+          ls -la *.ipa
 
       - name: 上传 IPA 为 Artifact
         uses: actions/upload-artifact@v4
