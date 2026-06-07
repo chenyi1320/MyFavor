@@ -98,21 +98,33 @@ jobs:
           </plist>
           EOF
       
-      - name: 导出 IPA
+      - name: 手动打包成 IPA(跳过 xcodebuild -exportArchive,它需要 Team)
         run: |
           set -e
-          cd build
-          # 不再 2>&1 | tail(会丢 exit code),改成显示完整输出
-          xcodebuild -exportArchive \
-            -archivePath MyFavor.xcarchive \
-            -exportPath . \
-            -exportOptionsPlist ExportOptions.plist
+          # archive 完成后,MyFavor.app 在:
+          #   build/MyFavor.xcarchive/Products/Applications/MyFavor.app
+          # 我们手动把它 zip 成 IPA 结构(Payload/ + 元数据)
 
-          # 列出产物
-          echo "--- build 目录内容 ---"
-          ls -la
-          echo "--- IPA 文件 ---"
-          ls -la *.ipa 2>/dev/null || { echo "❌ IPA 未生成"; exit 1; }
+          cd build/MyFavor.xcarchive/Products/Applications
+          echo "--- 验证 .app 存在 ---"
+          ls -la MyFavor.app/
+
+          echo "--- 创建 Payload 结构 ---"
+          mkdir -p Payload
+          cp -r MyFavor.app Payload/
+          # 创建必需的元数据(简化版,AltStore/Sideloadly 会处理)
+          # 一个最小可用的 IPA 只需要 Payload 目录
+
+          echo "--- 打包成 IPA ---"
+          # 用 zip 而不是 ditto(更通用)
+          zip -r ../../MyFavor-unsigned.ipa Payload/ -x "*.DS_Store" -q
+
+          echo "--- 验证 IPA ---"
+          cd ../..
+          ls -la MyFavor-unsigned.ipa
+          file MyFavor-unsigned.ipa || true
+          # 简单验证:unzip 列出 Payload
+          unzip -l MyFavor-unsigned.ipa | head -10
 
       - name: 上传 IPA 为 Artifact
         uses: actions/upload-artifact@v4
