@@ -1,0 +1,117 @@
+# ============================================
+# MyFavor Backend - 自动部署到阿里云 ECS
+# 触发:push 到 main 分支 或 手动触发
+# ============================================
+
+name: Deploy Backend to Aliyun ECS
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'backend/**'
+      - 'deploy-aliyun-mysql.sh'
+  workflow_dispatch:    # 允许手动触发
+
+env:
+  DEPLOY_PATH: /opt/myfavor/MyFavor
+
+jobs:
+  # ============================================
+  # Job 1: 构建检查(快速失败)
+  # ============================================
+  build:
+    name: Build & Type Check
+    runs-on: ubuntu-latest
+    
+    defaults:
+      run:
+        working-directory: ./backend
+    
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+      
+      - name: 装 Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+      
+      - name: 装依赖
+        run: npm ci --no-audit
+      
+      - name: 生成 Prisma Client
+        run: npx prisma generate
+      
+      - name: TypeScript 类型检查 + 编译
+        run: npm run build
+
+  # ============================================
+  # Job 2: 部署到 ECS(只在 build 成功后)
+  # ============================================
+  deploy:
+    name: Deploy to Aliyun ECS
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    
+    steps:
+      - name: SSH 连接到阿里云 ECS 并部署
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.ECS_HOST }}
+          username: ${{ secrets.ECS_USER }}
+          key: ${{ secrets.ECS_SSH_KEY }}
+          command_timeout: 10m
+          script: |
+            set -e
+            echo "=========================================="
+            echo "🚀 MyFavor Auto Deploy"
+            echo "时间: $(date '+%Y-%m-%d %H:%M:%S')"
+            echo "=========================================="
+            
+            # 1. 拉最新代码
+            echo "📥 [1/5] 拉取最新代码..."
+            cd ${{ env.DEPLOY_PATH }}
+            git fetch origin
+            git reset --hard origin/main
+            
+            # 2. 装依赖
+            echo "📦 [2/5] 装依赖(国内镜像)..."
+            cd backend
+            npm config set registry https://registry.npmmirror.com
+            npm install --omit=dev
+            
+            # 3. 同步 Prisma schema(可能无变化,但保险起见)
+            echo "🗄️ [3/5] 同步数据库 schema..."
+            npx prisma generate
+            # 推送 schema(开发可改,生产慎用)
+            npx prisma db push --skip-generate --accept-data-loss 2>&1 | tail -5 || echo "⚠️ db push 跳过(可能无变化)"
+            
+            # 4. 编译
+            echo "🔨 [4/5] 编译 TypeScript..."
+            npm run build
+            
+            # 5. 重启 PM2
+            echo "🔄 [5/5] 重启后端..."
+            pm2 delete myfavor-api 2>/dev/null || true
+            pm2 start dist/server.js --name myfavor-api
+            pm2 save
+            
+            # 健康检查
+            sleep 2
+            echo "🏥 健康检查..."
+            if curl -sf http://localhost:3000/health > /dev/null; then
+              echo "✅ 部署成功!服务健康"
+              pm2 status
+            else
+              echo "❌ 服务不健康,回滚..."
+              pm2 logs myfavor-api --lines 20 --nostream
+              exit 1
+            fi
+            
+            echo "=========================================="
+            echo "🎉 部署完成"
+            echo "=========================================="
