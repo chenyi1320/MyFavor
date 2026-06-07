@@ -143,7 +143,8 @@ struct StatsView: View {
             .foregroundStyle(.secondary)
             .padding(.horizontal)
             Divider()
-            ForEach(tableRows, id: \.label) { row in
+            ForEach(tableRows.indices, id: \.self) { idx in
+                let row = tableRows[idx]
                 HStack {
                     Text(row.label).frame(width: 80, alignment: .leading)
                     Spacer()
