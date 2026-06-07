@@ -60,7 +60,12 @@ struct ProfileView: View {
     private var userHeader: some View {
         HStack(spacing: 14) {
             ZStack {
-                Circle().fill(BrandGradient()).frame(width: 64, height: 64)
+                Circle()
+                    .fill(LinearGradient(
+                        colors: [Color.brandRed, Color.brandRedDeep],
+                        startPoint: .topLeading, endPoint: .bottomTrailing
+                    ))
+                    .frame(width: 64, height: 64)
                 if auth.isLoggedIn {
                     Text(String(auth.currentUser?.name.prefix(1) ?? "我"))
                         .font(.title.bold()).foregroundStyle(.white)

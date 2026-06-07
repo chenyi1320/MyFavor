@@ -186,13 +186,13 @@ struct StatsView: View {
         return items
     }
     
-    private struct TableRow {
+    private struct StatsRow {
         let label: String
         let incoming: Decimal
         let outgoing: Decimal
     }
     
-    private var tableRows: [TableRow] {
+    private var tableRows: [StatsRow] {
         let cal = Calendar.current
         let dict: [String: [Transaction]]
         switch groupBy {
@@ -210,7 +210,7 @@ struct StatsView: View {
         return dict.map { key, txs in
             let inc = txs.filter { $0.book?.direction == .incoming }.reduce(Decimal(0)) { $0 + $1.amount }
             let out = txs.filter { $0.book?.direction == .outgoing }.reduce(Decimal(0)) { $0 + $1.amount }
-            return TableRow(label: key, incoming: inc, outgoing: out)
+            return StatsRow(label: key, incoming: inc, outgoing: out)
         }
         .sorted { $0.label > $1.label }
     }
