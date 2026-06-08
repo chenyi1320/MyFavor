@@ -22,7 +22,18 @@
       "Bash(sed -n '125,135p' MyFavor/Views/Auth/LoginView.swift)",
       "Bash(sed -n '234,242p' MyFavor/Views/Auth/LoginView.swift)",
       "Bash(sed -n '82,90p' MyFavor/Views/BookDetail/BookDetailView.swift)",
-      "Bash(sed -n '34,45p' MyFavor/Views/BookDetail/AddTransactionSheet.swift)"
+      "Bash(sed -n '34,45p' MyFavor/Views/BookDetail/AddTransactionSheet.swift)",
+      "Read(//c/Users15187/my-project/MyFavor/**)",
+      "Bash(xargs wc -l)",
+      "Read(//c/Users/15187/my-project/backend/**)",
+      "Read(//c/Users/15187/my-project/backend/src/**)",
+      "Bash(sed -n '25,60p' MyFavor/Services/MagicLinkService.swift)",
+      "Bash(sed -n '60,100p' MyFavor/Services/MagicLinkService.swift)",
+      "Bash(grep -rn \"myfavor://\\\\|URL_SCHEME\\\\|onOpenURL\\\\|.onOpenURL\\\\|handleDeepLink\" MyFavor/)",
+      "Bash(sed -n '70,110p' MyFavor/Views/Profile/ProfileView.swift)",
+      "Bash(cat)",
+      "Read(//tmp/**)",
+      "Bash(rm /tmp/env.template)"
     ]
   }
 }

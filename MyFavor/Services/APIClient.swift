@@ -40,9 +40,10 @@ actor APIClient {
     
     /// 后端基地址 — 切换 dev/prod
     #if DEBUG
-    let baseURL = URL(string: "http://39.105.106.86:3000")!
+    // 模拟器调试:用 localhost(本机后端),改这行能切换到 ECS
+    let baseURL = URL(string: "http://localhost:3000")!
     #else
-    // 生产:阿里云 ECS 部署
+    // 真机 Release:连阿里云 ECS
     let baseURL = URL(string: "http://39.105.106.86:3000")!
     #endif
     
