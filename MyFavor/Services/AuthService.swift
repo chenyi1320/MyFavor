@@ -13,27 +13,39 @@ final class AuthService {
     /// 单例:把 @MainActor 加在 static let 上而不是 class 上
     @MainActor static let shared = AuthService()
 
+    // nonisolated(unsafe) static 存储:避免 deinit 访问 @MainActor 属性
+    // 单例:进程生命周期内唯一,deinit 不会真正被调用
+    // 这里保留 observer token 仅为静态分析,实际由 NotificationCenter 在进程退出时清理
+    nonisolated(unsafe) private static var observerToken: NSObjectProtocol?
+
     private init() {
         loadFromKeychain()
 
-        // 监听 401 失效 — 保存 observer token 以便 deinit 移除
-        authDidExpireObserver = NotificationCenter.default.addObserver(
+        // 监听 401 失效
+        // 用 MainActor.assumeIsolated 替代 Task { @MainActor in ... }:
+        //   - addObserver 已传 queue: .main,closure 本就在主队列执行
+        //   - assumeIsolated 不会创建新 Task,避免 [weak self] var 跨并发边界问题
+        let token = NotificationCenter.default.addObserver(
             forName: .authDidExpire, object: nil, queue: .main
         ) { [weak self] _ in
-            // 已在主队列,直接调用 MainActor 方法
-            Task { @MainActor in
-                self?.logout(notify: false)
+            // 立即 unwrap 弱引用为 let,避免 self var 跨边界
+            guard let service = self else { return }
+            // 已经在 main queue 上,显式声明为 main actor 隔离
+            MainActor.assumeIsolated {
+                service.logout(notify: false)
             }
         }
+        Self.observerToken = token
     }
 
     deinit {
-        if let token = authDidExpireObserver {
+        // 单例的 deinit 不会真正被调用
+        // 保留 deinit 是为了 Swift 6 静态分析 + 未来扩展时不会忘记清理
+        if let token = Self.observerToken {
             NotificationCenter.default.removeObserver(token)
+            Self.observerToken = nil
         }
     }
-
-    private var authDidExpireObserver: NSObjectProtocol?
 
     /// 当前是否已登录
     private(set) var isLoggedIn: Bool = false
