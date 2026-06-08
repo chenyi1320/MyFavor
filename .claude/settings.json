@@ -33,7 +33,11 @@
       "Bash(sed -n '70,110p' MyFavor/Views/Profile/ProfileView.swift)",
       "Bash(cat)",
       "Read(//tmp/**)",
-      "Bash(rm /tmp/env.template)"
+      "Bash(rm /tmp/env.template)",
+      "Bash(sed -i 's/case books, stats, contacts, profile/case books, stats, center, contacts, profile/' MyFavor/ContentView.swift)",
+      "Bash(sed -i 's/\\\\.tag\\(Tab.books\\) \\\\/\\\\/ .*//' MyFavor/ContentView.swift)",
+      "Bash(sed -i 's|\\\\.tabItem { Label\\(\"\", systemImage: \"\"\\) }$|\\\\.tabItem { Label\\(\"\", systemImage: \"\"\\) }\\\\n                    .tag\\(Tab.center\\)|' MyFavor/ContentView.swift)",
+      "Bash(sed -n '30,40p' MyFavor/ContentView.swift)"
     ]
   }
 }

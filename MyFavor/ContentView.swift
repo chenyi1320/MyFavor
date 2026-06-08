@@ -13,7 +13,7 @@ struct RootTabView: View {
     @State private var showAddSheet = false
     
     enum Tab: Hashable {
-        case books, stats, contacts, profile
+        case books, stats, center, contacts, profile
     }
     
     var body: some View {
@@ -30,7 +30,8 @@ struct RootTabView: View {
                 // 中央占位(由浮动按钮覆盖)
                 Color.clear
                     .tabItem { Label("", systemImage: "") }
-                    .tag(Tab.books) // 不可独立 tag
+                    .tag(Tab.center)
+                    
                 
                 ContactsView()
                     .tabItem { Label("联系人", systemImage: "person.2.fill") }
