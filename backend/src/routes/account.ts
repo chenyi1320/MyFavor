@@ -31,8 +31,17 @@ accountRoutes.get('/', async (req, res, next) => {
 accountRoutes.delete('/', async (req, res, next) => {
   try {
     const userId = req.user!.sub;
-    // Cascading delete via Prisma onDelete: Cascade
-    await prisma.user.delete({ where: { id: userId } });
+    // 先取 email,MagicToken.email 没有 FK 必须显式清理
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    if (!user) return res.status(404).json({ error: 'User not found' });
+
+    // 事务包裹:Cascade + 清理 MagicToken
+    // 否则删除账户后,旧 token 仍可用于"用同一 email 创建新账户" → 隐私泄露
+    await prisma.$transaction([
+      prisma.magicToken.deleteMany({ where: { email: user.email } }),
+      prisma.user.delete({ where: { id: userId } }),
+    ]);
+
     res.json({ ok: true });
   } catch (err) { next(err); }
 });

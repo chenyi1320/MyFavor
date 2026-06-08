@@ -10,10 +10,25 @@ import { errorHandler } from './middleware/error.js';
 const app = express();
 const PORT = parseInt(process.env.PORT || '3000', 10);
 
+// === 安全:启动时强制要求 JWT_SECRET(必须在路由加载前导入) ===
+import './lib/jwt.js';  // 触发 jwt.ts 顶部的启动校验
+
+const ALLOWED_ORIGINS = (process.env.CORS_ORIGINS || 'http://localhost:3000,http://localhost:5173')
+  .split(',')
+  .map(s => s.trim())
+  .filter(Boolean);
+
 app.use(cors({
-  origin: '*',                  // 生产请收紧
+  origin: (origin, cb) => {
+    // 同源 / curl / Postman 无 origin 头,放行
+    if (!origin) return cb(null, true);
+    if (ALLOWED_ORIGINS.includes(origin)) return cb(null, true);
+    return cb(new Error(`CORS blocked: ${origin}`));
+  },
   exposedHeaders: ['x-server-time'],
+  credentials: true,
 }));
+app.set('trust proxy', parseInt(process.env.TRUST_PROXY_COUNT || '1', 10));
 app.use(express.json({ limit: '5mb' }));
 
 // Health check

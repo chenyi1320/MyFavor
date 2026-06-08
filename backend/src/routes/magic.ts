@@ -22,12 +22,9 @@ function isValidEmail(s: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s);
 }
 function genCode(): string {
-  // 6 位数字,首位不为 0
-  let s = String(Math.floor(Math.random() * 9) + 1);
-  for (let i = 1; i < CODE_LENGTH; i++) {
-    s += String(Math.floor(Math.random() * 10));
-  }
-  return s;
+  // 6 位数字(100000-999999),用密码学安全随机
+  // Math.random() 是非密码学 PRNG,xorshift128+ 可被预测 → 验证码可被绕过
+  return String(crypto.randomInt(100000, 1000000));
 }
 function genToken(): string {
   return crypto.randomBytes(32).toString('hex'); // 64-char
@@ -83,12 +80,13 @@ magicRoutes.post('/send', async (req, res, next) => {
     const code = genCode();
     const expiresAt = new Date(Date.now() + CODE_EXPIRY_MIN * 60_000);
 
+    // ---- 先发邮件,成功后再写库 ----
+    // 避免:发邮件失败时数据库已落记录,用户重试被限频挡掉
+    await sendMagicLinkEmail({ to: email, token, code });
+
     await prisma.magicToken.create({
       data: { email, token, code, expiresAt, ip, userAgent: ua },
     });
-
-    // ---- 发邮件 ----
-    await sendMagicLinkEmail({ to: email, token, code });
 
     return res.json({
       ok: true,
@@ -148,20 +146,28 @@ magicRoutes.post('/verify', async (req, res, next) => {
       return res.status(401).json({ error: '验证码已过期,请重新获取' });
     }
 
-    // 标记已用
-    await prisma.magicToken.update({
-      where: { id: mt.id },
+    // === 原子操作:同时校验未使用 + 标记已用,杜绝 TOCTOU 竞态 ===
+    // (之前是 read → check → update 3 步,两个并发请求可同时通过校验,得到 2 个 JWT)
+    const claimed = await prisma.magicToken.updateMany({
+      where: {
+        id: mt.id,
+        usedAt: null,
+        expiresAt: { gt: new Date() },
+      },
       data: { usedAt: new Date() },
     });
+    if (claimed.count === 0) {
+      return res.status(401).json({ error: '验证码已被使用' });
+    }
 
-    // upsert user
+    // === upsert user(注意:不再复活 deletedAt=null,避免"软删账户可被任意新验证码复活") ===
     const user = await prisma.user.upsert({
       where: { email: mt.email },
       create: {
         email: mt.email,
         name: mt.email.split('@')[0],
       },
-      update: { lastLoginAt: new Date(), deletedAt: null },
+      update: { lastLoginAt: new Date() },
     });
 
     // sign JWT

@@ -79,7 +79,13 @@ jobs:
 
             # 3. 同步数据库 schema
             echo "🗄️ [3/6] 同步数据库 schema..."
-            ./node_modules/.bin/prisma db push --skip-generate --accept-data-loss 2>&1 | tail -5 || echo "⚠️ db push 跳过"
+            # 优先用 migrate(更安全,需要历史 migration 文件);无迁移时 fallback 到 db push
+            if [ -d prisma/migrations ]; then
+              ./node_modules/.bin/prisma migrate deploy 2>&1 | tail -10
+            else
+              # ⚠️ 首次部署可接受 db push;后续必须有 migration 文件
+              ./node_modules/.bin/prisma db push --skip-generate 2>&1 | tail -10
+            fi
 
             # 4. 编译(用本地 tsc)
             echo "🔨 [4/6] 编译 TypeScript..."

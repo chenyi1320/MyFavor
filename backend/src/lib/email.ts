@@ -1,12 +1,17 @@
 // MyFavor — Resend email integration
 import { Resend } from 'resend';
 
+// === 强制:启动时校验 Resend API Key ===
+// 缺失直接 throw,服务起不来 → 强制运维修配置
 const apiKey = process.env.RESEND_API_KEY;
 if (!apiKey) {
-  console.warn('[Email] RESEND_API_KEY not set, emails will fail');
+  throw new Error(
+    '[FATAL] RESEND_API_KEY required.\n' +
+    '在 https://resend.com/api-keys 创建一个,然后在 .env 中设置 RESEND_API_KEY=<你的 key>'
+  );
 }
 
-export const resend = new Resend(apiKey || 'missing');
+export const resend = new Resend(apiKey);
 export const FROM = process.env.RESEND_FROM_EMAIL || 'MyFavor <onboarding@resend.dev>';
 export const APP_NAME = process.env.APP_NAME || 'MyFavor';
 export const APP_URL = process.env.APP_URL || 'http://localhost:3000';
@@ -37,9 +42,7 @@ export async function sendMagicLinkEmail(opts: {
     subject: `${APP_NAME} 登录验证 - ${code}`,
     html,
     text,
-    headers: {
-      'X-Entity-Ref-ID': token.slice(0, 8),
-    },
+    // 移除 X-Entity-Ref-ID 头(之前含 token 前 8 位,会泄露到 Resend 后台)
   });
 
   if (error) {
