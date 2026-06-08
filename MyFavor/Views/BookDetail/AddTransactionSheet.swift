@@ -47,7 +47,7 @@ struct AddTransactionSheet: View {
                         showNewContact = true
                     } label: {
                         Label("添加新联系人", systemImage: "person.crop.circle.badge.plus")
-                            .foregroundStyle(.brandRed)
+                            .foregroundStyle(.brandInk)
                     }
                 }
                 

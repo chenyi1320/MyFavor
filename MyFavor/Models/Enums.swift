@@ -10,14 +10,14 @@ import SwiftUI
 
 /// 来往方向:收礼 or 送礼
 enum Direction: String, Codable, CaseIterable, Identifiable {
-    case incoming = "收礼"   // 收到的人情
-    case outgoing = "送礼"   // 送出的人情
+    case incoming = "收礼"   // 收礼方向
+    case outgoing = "送礼"   // 送礼方向
     
     var id: String { rawValue }
     
     var color: Color {
         switch self {
-        case .incoming: return Color.brandRed
+        case .incoming: return Color.brandInk
         case .outgoing: return Color.brandTeal
         }
     }

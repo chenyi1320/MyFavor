@@ -23,7 +23,7 @@ final class LedgerBook {
     /// 备注
     var note: String = ""
     /// 封面颜色(hex 字符串)
-    var coverColorHex: String = "#FF6B6B"
+    var coverColorHex: String = "#2C5F4F"
     /// 是否已封账(封账后不可编辑)
     var isClosed: Bool = false
     /// 创建时间
@@ -51,7 +51,7 @@ final class LedgerBook {
         direction: Direction = .incoming,
         eventDate: Date = .now,
         note: String = "",
-        coverColorHex: String = "#FF6B6B",
+        coverColorHex: String = "#2C5F4F",
         isClosed: Bool = false
     ) {
         self.title = title

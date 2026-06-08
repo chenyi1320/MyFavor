@@ -62,7 +62,7 @@ final class AuthService {
         }
     }
     
-    // MARK: - 永久删除账号(苹果审核惯例,即使用邮箱登录也最好提供)
+    // MARK: - 永久删除账号(隐私法规要求,所有登录方式都应提供)
     func deleteAccount() async throws {
         try await APIClient.shared.requestVoid("/account", method: .DELETE)
         logout()

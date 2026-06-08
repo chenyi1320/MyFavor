@@ -31,7 +31,7 @@ enum SampleData {
             direction: .incoming,
             eventDate: Calendar.current.date(byAdding: .day, value: -120, to: .now) ?? .now,
             note: "婚礼当天收礼",
-            coverColorHex: "#FF6B6B"
+            coverColorHex: "#2C5F4F"
         )
         let zhouSuiBook = LedgerBook(
             title: "女儿周岁",
@@ -64,7 +64,7 @@ enum SampleData {
         // ===== 事件提醒 =====
         let r1 = Reminder(title: "老李结婚",
                           date: Calendar.current.date(byAdding: .day, value: 6,   to: .now) ?? .now,
-                          advanceDays: 1, colorHex: "#FF6B6B")
+                          advanceDays: 1, colorHex: "#2C5F4F")
         let r2 = Reminder(title: "王总饭店开业",
                           date: Calendar.current.date(byAdding: .day, value: 12,  to: .now) ?? .now,
                           advanceDays: 3, colorHex: "#F2B53C")

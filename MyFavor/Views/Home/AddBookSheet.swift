@@ -15,11 +15,17 @@ struct AddBookSheet: View {
     @State private var direction: Direction = .incoming
     @State private var date: Date = .now
     @State private var note = ""
-    @State private var colorHex = "#FF6B6B"
+    @State private var colorHex = "#2C5F4F"
     
     private let colorChoices: [String] = [
-        "#FF6B6B", "#F2B53C", "#2BB6A6", "#4A90E2",
-        "#9B6BFF", "#E63946", "#FF8A65", "#3D5A80"
+        "#2C5F4F",  // 墨绿(主)
+        "#1A3D2E",  // 深墨绿
+        "#F2B53C",  // 金
+        "#2BB6A6",  // 青
+        "#9B6BFF",  // 紫
+        "#4A90E2",  // 蓝
+        "#FF8A65",  // 橙
+        "#3D5A80"   // 深蓝
     ]
     
     var body: some View {

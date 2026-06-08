@@ -65,7 +65,7 @@ struct HomeView: View {
                 .searchable(text: $searchText, placement: .navigationBarDrawer(displayMode: .always),
                             prompt: "搜索礼簿")
             }
-            .navigationTitle("人情账簿")
+            .navigationTitle("礼簿")
             .navigationBarTitleDisplayMode(.large)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
@@ -98,13 +98,13 @@ struct HomeView: View {
             BrandGradient()
                 .clipShape(RoundedRectangle(cornerRadius: 18))
                 .frame(height: 110)
-                .shadow(color: .brandRed.opacity(0.25), radius: 12, y: 6)
+                .shadow(color: .brandInk.opacity(0.25), radius: 12, y: 6)
             HStack {
                 VStack(alignment: .leading, spacing: 6) {
                     Text("共享记账")
                         .font(.title2.bold())
                         .foregroundStyle(.white)
-                    Text("全家人共记一份人情账")
+                    Text("一个本子，全家共享")
                         .font(.subheadline)
                         .foregroundStyle(.white.opacity(0.9))
                 }
@@ -130,7 +130,7 @@ struct HomeView: View {
                             .font(.headline)
                             .foregroundStyle(direction == dir ? Color.primary : .secondary)
                         Rectangle()
-                            .fill(direction == dir ? Color.brandRed : .clear)
+                            .fill(direction == dir ? Color.brandInk : .clear)
                             .frame(height: 3)
                             .clipShape(Capsule())
                     }
@@ -199,16 +199,16 @@ struct AddBookCardPlaceholder: View {
         VStack(spacing: 10) {
             Image(systemName: "plus")
                 .font(.system(size: 28, weight: .semibold))
-                .foregroundStyle(.brandRed)
+                .foregroundStyle(.brandInk)
             Text("添加礼簿")
                 .font(.subheadline)
-                .foregroundStyle(.brandRed)
+                .foregroundStyle(.brandInk)
         }
         .frame(maxWidth: .infinity, minHeight: 152)
         .background(
             RoundedRectangle(cornerRadius: 16)
                 .strokeBorder(style: StrokeStyle(lineWidth: 1.2, dash: [6,4]))
-                .foregroundStyle(.brandRed.opacity(0.6))
+                .foregroundStyle(.brandInk.opacity(0.6))
         )
     }
 }

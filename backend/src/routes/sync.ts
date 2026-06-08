@@ -101,7 +101,7 @@ syncRoutes.post('/push', async (req, res, next) => {
         directionRaw: b.directionRaw,
         eventDate: new Date(b.eventDate),
         note: b.note ?? '',
-        coverColorHex: b.coverColorHex ?? '#FF6B6B',
+        coverColorHex: b.coverColorHex ?? '#2C5F4F',
         isClosed: !!b.isClosed,
         deletedAt: b.deletedAt ? new Date(b.deletedAt) : null,
       };
@@ -175,7 +175,7 @@ syncRoutes.post('/push', async (req, res, next) => {
         useLunar: !!r.useLunar,
         advanceDays: r.advanceDays ?? 7,
         note: r.note ?? '',
-        colorHex: r.colorHex ?? '#FF6B6B',
+        colorHex: r.colorHex ?? '#2C5F4F',
         isEnabled: r.isEnabled !== false,
         deletedAt: r.deletedAt ? new Date(r.deletedAt) : null,
       };

@@ -23,7 +23,7 @@ final class Reminder {
     /// 备注
     var note: String = ""
     /// 颜色标签(hex)
-    var colorHex: String = "#FF6B6B"
+    var colorHex: String = "#2C5F4F"
     /// 是否启用
     var isEnabled: Bool = true
     /// 创建时间
@@ -42,7 +42,7 @@ final class Reminder {
         useLunar: Bool = false,
         advanceDays: Int = 7,
         note: String = "",
-        colorHex: String = "#FF6B6B",
+        colorHex: String = "#2C5F4F",
         isEnabled: Bool = true
     ) {
         self.title = title

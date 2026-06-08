@@ -41,7 +41,7 @@ struct RootTabView: View {
                     .tabItem { Label("我的", systemImage: "person.crop.circle.fill") }
                     .tag(Tab.profile)
             }
-            .tint(.brandRed)
+            .tint(.brandInk)
             
             // 中央悬浮 + 按钮
             Button {
@@ -50,11 +50,11 @@ struct RootTabView: View {
                 ZStack {
                     Circle()
                         .fill(LinearGradient(
-                            colors: [Color.brandRed, Color.brandRedDeep],
+                            colors: [Color.brandInk, Color.brandInkDeep],
                             startPoint: .topLeading, endPoint: .bottomTrailing
                         ))
                         .frame(width: 58, height: 58)
-                        .shadow(color: .brandRed.opacity(0.45), radius: 10, x: 0, y: 4)
+                        .shadow(color: .brandInk.opacity(0.45), radius: 10, x: 0, y: 4)
                     Image(systemName: "plus")
                         .font(.system(size: 26, weight: .bold))
                         .foregroundStyle(.white)
@@ -81,7 +81,7 @@ struct QuickAddSheet: View {
         NavigationStack {
             VStack(spacing: 14) {
                 addRow(title: "新建礼簿", subtitle: "为一个事件建立账本",
-                       icon: "book.closed.fill", color: .brandRed) { showBook = true }
+                       icon: "book.closed.fill", color: .brandInk) { showBook = true }
                 addRow(title: "记一笔来往", subtitle: "快速录入收/送礼",
                        icon: "yensign.circle.fill", color: .brandTeal) { showTx = true }
                 addRow(title: "添加事件提醒", subtitle: "重要日子不再忘",

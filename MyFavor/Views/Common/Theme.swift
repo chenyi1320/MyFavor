@@ -2,16 +2,16 @@
 //  Theme.swift
 //  MyFavor
 //
-//  品牌色 & 主题封装(对标人情账簿的珊瑚红主色)
+//  品牌色 & 主题 — 墨绿 + 琥珀 配色方案(自研)
 //
 
 import SwiftUI
 
-/// ShapeStyle 扩展 — 让 `.brandRed` 等可在 .foregroundStyle() 中用
+/// ShapeStyle 扩展 — 让 `.brandInk` 等可在 .foregroundStyle() 中用
 extension ShapeStyle where Self == Color {
-    static var brandRed: Color { Color.brandRed }
-    static var brandRedDeep: Color { Color.brandRedDeep }
-    static var brandRedSoft: Color { Color.brandRedSoft }
+    static var brandInk: Color { Color.brandInk }
+    static var brandInkDeep: Color { Color.brandInkDeep }
+    static var brandInkSoft: Color { Color.brandInkSoft }
     static var brandTeal: Color { Color.brandTeal }
     static var brandGold: Color { Color.brandGold }
     static var cardBackground: Color { Color.cardBackground }
@@ -23,7 +23,7 @@ extension ShapeStyle where Self == Color {
 extension ShapeStyle where Self == LinearGradient {
     static var brandGradient: LinearGradient {
         LinearGradient(
-            colors: [Color.brandRed, Color.brandRedDeep],
+            colors: [Color.brandInk, Color.brandInkDeep],
             startPoint: .topLeading,
             endPoint: .bottomTrailing
         )
@@ -31,23 +31,25 @@ extension ShapeStyle where Self == LinearGradient {
 }
 
 extension Color {
-    /// 品牌主色 — 珊瑚红(对标人情账簿)
-    static let brandRed = Color(hex: "#FF6B6B")
-    /// 深红(强调)
-    static let brandRedDeep = Color(hex: "#E63946")
-    /// 浅红背景
-    static let brandRedSoft = Color(hex: "#FFE5E5")
-    /// 收/送差额—正向(蓝绿)
+    /// 品牌主色 — 墨绿(自研配色)
+    static let brandInk = Color(hex: "#2C5F4F")
+    /// 深墨绿(强调)
+    static let brandInkDeep = Color(hex: "#1A3D2E")
+    /// 浅墨绿背景
+    static let brandInkSoft = Color(hex: "#E8F0E8")
+    /// 收/送差额—正向(青绿)
     static let brandTeal = Color(hex: "#2BB6A6")
-    /// 强调金色(VIP / 礼金)
+    /// 强调金色(礼金 / 重要金额)
     static let brandGold = Color(hex: "#F2B53C")
+    /// 琥珀辅助色
+    static let brandAmber = Color(hex: "#F5E6D3")
     /// 卡片背景
     static let cardBackground = Color(.systemBackground)
     /// 页面背景
-    static let pageBackground = Color(hex: "#F7F7F9")
+    static let pageBackground = Color(hex: "#FAF8F4")
     /// 次要文字
     static let secondaryText  = Color(hex: "#8E8E93")
-    
+
     /// 从 HEX 字符串构造 Color
     init(hex: String) {
         let h = hex.trimmingCharacters(in: .whitespaces)
@@ -77,7 +79,7 @@ extension Color {
 struct BrandGradient: View {
     var body: some View {
         LinearGradient(
-            colors: [Color.brandRed, Color.brandRedDeep],
+            colors: [Color.brandInk, Color.brandInkDeep],
             startPoint: .topLeading, endPoint: .bottomTrailing
         )
     }

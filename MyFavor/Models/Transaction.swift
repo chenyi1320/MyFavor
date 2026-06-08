@@ -8,7 +8,7 @@
 import Foundation
 import SwiftData
 
-/// 单条人情往来记录
+/// 单条礼尚往来记录(收/送礼)
 @Model
 final class Transaction {
     /// 金额(支持小数)

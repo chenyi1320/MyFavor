@@ -83,8 +83,8 @@ struct BookDetailView: View {
                 Text("\(book.category.emoji) \(book.category.rawValue)")
                     .font(.caption.bold())
                     .padding(.horizontal, 10).padding(.vertical, 4)
-                    .background(Color.brandRedSoft)
-                    .foregroundStyle(.brandRedDeep)
+                    .background(Color.brandInkSoft)
+                    .foregroundStyle(.brandInkDeep)
                     .clipShape(Capsule())
                 Spacer()
                 Text(Fmt.shortDate.string(from: book.eventDate))
@@ -128,7 +128,7 @@ struct BookDetailView: View {
                     Text(key.rawValue)
                         .font(.caption.bold())
                         .padding(.horizontal, 12).padding(.vertical, 6)
-                        .background(sortKey == key ? Color.brandRed : Color.cardBackground)
+                        .background(sortKey == key ? Color.brandInk : Color.cardBackground)
                         .foregroundStyle(sortKey == key ? .white : .secondary)
                         .clipShape(Capsule())
                 }
@@ -168,7 +168,7 @@ struct BookDetailView: View {
                     VStack(alignment: .leading, spacing: 8) {
                         Text(letter)
                             .font(.caption.bold())
-                            .foregroundStyle(.brandRed)
+                            .foregroundStyle(.brandInk)
                             .padding(.leading, 4)
                         VStack(spacing: 0) {
                             ForEach(txs) { tx in

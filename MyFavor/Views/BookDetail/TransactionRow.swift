@@ -13,7 +13,7 @@ struct TransactionRow: View {
             // 头像
             ZStack {
                 Circle()
-                    .fill(Color.brandRedSoft)
+                    .fill(Color.brandInkSoft)
                     .frame(width: 44, height: 44)
                 Text(tx.contact?.avatarEmoji ?? "🙂")
                     .font(.title3)

@@ -40,11 +40,13 @@ actor APIClient {
     
     /// 后端基地址 — 切换 dev/prod
     #if DEBUG
-    // 模拟器调试:用 localhost(本机后端),改这行能切换到 ECS
+    // 模拟器调试:用 localhost(本机后端)
     let baseURL = URL(string: "http://localhost:3000")!
     #else
-    // 真机 Release:连阿里云 ECS
-    let baseURL = URL(string: "http://39.105.106.86:3000")!
+    // 真机 Release:从 Info.plist 读取(避免硬编码到代码)
+    // 上线前在 Xcode Info.plist 中配置 API_BASE_URL 为你的 HTTPS 域名
+    let baseURL = URL(string: Bundle.main.object(forInfoDictionaryKey: "API_BASE_URL") as? String
+                      ?? "https://api.example.com")!
     #endif
     
     private let session: URLSession

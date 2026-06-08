@@ -7,9 +7,11 @@ export function errorHandler(
   _next: NextFunction
 ) {
   console.error('[ERROR]', err);
-  const code = err.statusCode || err.status || 500;
+  const code = err.statusCode || err.status || err.httpStatus || 500;
   res.status(code).json({
     error: err.message || 'Internal Server Error',
+    ...(err.code ? { code: err.code } : {}),
+    ...(err.hint ? { hint: err.hint } : {}),
     ...(process.env.NODE_ENV === 'development' && { stack: err.stack }),
   });
 }

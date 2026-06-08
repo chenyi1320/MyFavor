@@ -36,7 +36,7 @@ struct MyFavorApp: App {
             Group {
                 if auth.isLoggedIn || didSkipLogin {
                     RootTabView()
-                        .tint(.brandRed)
+                        .tint(.brandInk)
                         .task {
                             // 首次启动种子数据
                             SampleData.seedIfNeeded(in: container.mainContext)

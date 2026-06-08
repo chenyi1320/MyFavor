@@ -75,7 +75,7 @@ struct LoginView: View {
             Text("MyFavor")
                 .font(.system(size: 36, weight: .bold, design: .rounded))
                 .foregroundStyle(.white)
-            Text("人情往来,温情有数")
+            Text("自托管 · 你的数据你做主")
                 .font(.subheadline)
                 .foregroundStyle(.white.opacity(0.85))
         }
@@ -118,7 +118,7 @@ struct LoginView: View {
             Button { Task { await sendCode() } } label: {
                 HStack {
                     if magic.isLoading {
-                        ProgressView().tint(.brandRed)
+                        ProgressView().tint(.brandInk)
                     } else {
                         Text("发送验证码")
                             .font(.headline)
@@ -127,7 +127,7 @@ struct LoginView: View {
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 14)
                 .background(.white)
-                .foregroundStyle(.brandRed)
+                .foregroundStyle(.brandInk)
                 .clipShape(RoundedRectangle(cornerRadius: 12))
             }
             .disabled(magic.isLoading || !isValidEmail(email))
@@ -236,7 +236,7 @@ struct LoginView: View {
                 )
             Text(char)
                 .font(.system(size: 26, weight: .bold, design: .rounded))
-                .foregroundStyle(isFilled ? .brandRed : .white)
+                .foregroundStyle(isFilled ? .brandInk : .white)
         }
     }
     

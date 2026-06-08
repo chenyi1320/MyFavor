@@ -25,7 +25,7 @@
     <key>UILaunchScreen</key>
     <dict>
         <key>UIColorName</key>
-        <string>BrandRed</string>
+        <string>BrandInk</string>
     </dict>
     <key>UIApplicationSceneManifest</key>
     <dict>
@@ -48,7 +48,7 @@
         <string>UIInterfaceOrientationLandscapeRight</string>
     </array>
     <key>NSContactsUsageDescription</key>
-    <string>用于导入您的通讯录联系人到人情账</string>
+    <string>用于将您的联系人快速导入到礼尚往来记录中,避免手动逐个添加。</string>
     <key>CFBundleURLTypes</key>
     <array>
         <dict>
@@ -76,9 +76,11 @@
                 <key>NSExceptionAllowsInsecureHTTPLoads</key>
                 <true/>
                 <key>NSIncludesSubdomains</key>
-                <true/>
+                <false/>
             </dict>
         </dict>
     </dict>
+    <key>API_BASE_URL</key>
+    <string>http://39.105.106.86:3000</string>
 </dict>
 </plist>

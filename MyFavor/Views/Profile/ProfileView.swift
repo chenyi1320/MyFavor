@@ -62,7 +62,7 @@ struct ProfileView: View {
             ZStack {
                 Circle()
                     .fill(LinearGradient(
-                        colors: [Color.brandRed, Color.brandRedDeep],
+                        colors: [Color.brandInk, Color.brandInkDeep],
                         startPoint: .topLeading, endPoint: .bottomTrailing
                     ))
                     .frame(width: 64, height: 64)
@@ -95,7 +95,7 @@ struct ProfileView: View {
                     Text("登录")
                         .font(.caption.bold())
                         .padding(.horizontal, 14).padding(.vertical, 6)
-                        .background(Color.brandRed)
+                        .background(Color.brandInk)
                         .foregroundStyle(.white)
                         .clipShape(Capsule())
                 }
@@ -112,7 +112,7 @@ struct ProfileView: View {
         VStack(spacing: 12) {
             HStack {
                 Image(systemName: "icloud.fill")
-                    .foregroundStyle(.brandRed)
+                    .foregroundStyle(.brandInk)
                 Text("云同步").font(.headline)
                 Spacer()
                 if sync.isSyncing {
@@ -123,7 +123,7 @@ struct ProfileView: View {
                     }
                     .font(.caption.bold())
                     .padding(.horizontal, 12).padding(.vertical, 6)
-                    .background(Color.brandRed)
+                    .background(Color.brandInk)
                     .foregroundStyle(.white)
                     .clipShape(Capsule())
                 }
@@ -159,7 +159,7 @@ struct ProfileView: View {
     
     private func statBox(_ value: String, _ label: String) -> some View {
         VStack(spacing: 4) {
-            Text(value).font(.title2.bold()).foregroundStyle(.brandRed)
+            Text(value).font(.title2.bold()).foregroundStyle(.brandInk)
             Text(label).font(.caption).foregroundStyle(.secondary)
         }
         .frame(maxWidth: .infinity)
@@ -181,7 +181,7 @@ struct ProfileView: View {
             Divider().padding(.leading, 60)
             row("person.2.fill", "共享记账(规划中)", .purple)
             Divider().padding(.leading, 60)
-            row("star.fill", "评分支持", .brandRed)
+            row("star.fill", "评分支持", .brandInk)
             Divider().padding(.leading, 60)
             row("info.circle.fill", "关于 MyFavor", .gray)
         }

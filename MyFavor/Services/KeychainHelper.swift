@@ -18,7 +18,6 @@ final class KeychainHelper {
     enum Key: String {
         case jwtToken    = "jwt_token"
         case userId      = "user_id"
-        case appleSub    = "apple_sub"
         case userEmail   = "user_email"
         case userName    = "user_name"
         case tokenExpiry = "token_expiry"
@@ -72,6 +71,6 @@ final class KeychainHelper {
 
 extension KeychainHelper.Key {
     static var allKeys: [KeychainHelper.Key] {
-        [.jwtToken, .userId, .appleSub, .userEmail, .userName, .tokenExpiry]
+        [.jwtToken, .userId, .userEmail, .userName, .tokenExpiry]
     }
 }

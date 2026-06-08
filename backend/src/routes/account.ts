@@ -1,5 +1,5 @@
 // GET /account     — return current user
-// DELETE /account  — delete account & all data(Apple requires this)
+// DELETE /account  — delete account & all data(隐私法规要求)
 import { Router } from 'express';
 import { prisma } from '../lib/prisma.js';
 import { requireAuth } from '../middleware/auth.js';

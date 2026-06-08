@@ -49,7 +49,7 @@ struct ContactsView: View {
                             } header: {
                                 Text(letter)
                                     .font(.caption.bold())
-                                    .foregroundStyle(.brandRed)
+                                    .foregroundStyle(.brandInk)
                                     .padding(.leading, 22)
                                     .frame(maxWidth: .infinity, alignment: .leading)
                                     .padding(.vertical, 4)
@@ -84,7 +84,7 @@ struct ContactRow: View {
     var body: some View {
         HStack(spacing: 12) {
             ZStack {
-                Circle().fill(Color.brandRedSoft).frame(width: 48, height: 48)
+                Circle().fill(Color.brandInkSoft).frame(width: 48, height: 48)
                 Text(contact.avatarEmoji).font(.title2)
             }
             VStack(alignment: .leading, spacing: 3) {
@@ -93,8 +93,8 @@ struct ContactRow: View {
                     Text(contact.relationship.rawValue)
                         .font(.caption2)
                         .padding(.horizontal, 6).padding(.vertical, 1)
-                        .background(Color.brandRedSoft)
-                        .foregroundStyle(.brandRedDeep)
+                        .background(Color.brandInkSoft)
+                        .foregroundStyle(.brandInkDeep)
                         .clipShape(Capsule())
                 }
                 Text("\(contact.transactionCount) 笔来往")
@@ -103,7 +103,7 @@ struct ContactRow: View {
             Spacer()
             VStack(alignment: .trailing, spacing: 2) {
                 Text("收 " + Fmt.money(contact.totalIncoming))
-                    .font(.caption2).foregroundStyle(.brandRed)
+                    .font(.caption2).foregroundStyle(.brandInk)
                 Text("送 " + Fmt.money(contact.totalOutgoing))
                     .font(.caption2).foregroundStyle(.brandTeal)
             }
@@ -124,15 +124,15 @@ struct ContactDetailView: View {
             VStack(spacing: 16) {
                 VStack(spacing: 8) {
                     ZStack {
-                        Circle().fill(Color.brandRedSoft).frame(width: 84, height: 84)
+                        Circle().fill(Color.brandInkSoft).frame(width: 84, height: 84)
                         Text(contact.avatarEmoji).font(.system(size: 44))
                     }
                     Text(contact.name).font(.title2.bold())
                     Text(contact.relationship.rawValue)
                         .font(.caption)
                         .padding(.horizontal, 10).padding(.vertical, 3)
-                        .background(Color.brandRedSoft)
-                        .foregroundStyle(.brandRedDeep)
+                        .background(Color.brandInkSoft)
+                        .foregroundStyle(.brandInkDeep)
                         .clipShape(Capsule())
                     if !contact.phone.isEmpty {
                         Text(contact.phone).font(.caption).foregroundStyle(.secondary)
@@ -141,7 +141,7 @@ struct ContactDetailView: View {
                 .padding(.top)
                 
                 HStack(spacing: 12) {
-                    statBox("收礼", contact.totalIncoming, .brandRed)
+                    statBox("收礼", contact.totalIncoming, .brandInk)
                     statBox("送礼", contact.totalOutgoing, .brandTeal)
                 }
                 .padding(.horizontal)
@@ -151,7 +151,7 @@ struct ContactDetailView: View {
                     Spacer()
                     Text(Fmt.money(contact.balance))
                         .font(.headline.bold())
-                        .foregroundStyle(contact.balance >= 0 ? .brandRed : .brandTeal)
+                        .foregroundStyle(contact.balance >= 0 ? .brandInk : .brandTeal)
                 }
                 .padding()
                 .background(Color.cardBackground)
@@ -228,7 +228,7 @@ struct AddContactSheet: View {
                     LazyVGrid(columns: [GridItem(.adaptive(minimum: 40))]) {
                         ForEach(emojiChoices, id: \.self) { e in
                             Text(e).font(.title2).padding(6)
-                                .background(emoji == e ? Color.brandRedSoft : .clear)
+                                .background(emoji == e ? Color.brandInkSoft : .clear)
                                 .clipShape(Circle())
                                 .onTapGesture { emoji = e }
                         }

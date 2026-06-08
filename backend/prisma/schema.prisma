@@ -55,7 +55,7 @@ model LedgerBook {
   directionRaw  String
   eventDate     DateTime
   note          String    @default("")
-  coverColorHex String    @default("#FF6B6B")
+  coverColorHex String    @default("#2C5F4F")
   isClosed      Boolean   @default(false)
 
   createdAt     DateTime  @default(now())
@@ -130,7 +130,7 @@ model Reminder {
   useLunar      Boolean   @default(false)
   advanceDays   Int       @default(7)
   note          String    @default("")
-  colorHex      String    @default("#FF6B6B")
+  colorHex      String    @default("#2C5F4F")
   isEnabled     Boolean   @default(true)
 
   createdAt     DateTime  @default(now())

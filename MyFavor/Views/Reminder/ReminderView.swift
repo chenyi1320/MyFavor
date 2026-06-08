@@ -99,10 +99,16 @@ struct AddReminderSheet: View {
     @State private var title = ""
     @State private var date: Date = Calendar.current.date(byAdding: .day, value: 7, to: .now) ?? .now
     @State private var advanceDays = 7
-    @State private var colorHex = "#FF6B6B"
+    @State private var colorHex = "#2C5F4F"
     @State private var note = ""
     
-    private let colorChoices = ["#FF6B6B", "#F2B53C", "#2BB6A6", "#4A90E2", "#9B6BFF"]
+    private let colorChoices = [
+        "#2C5F4F",  // 墨绿(主)
+        "#1A3D2E",  // 深墨绿
+        "#F2B53C",  // 金
+        "#2BB6A6",  // 青
+        "#9B6BFF"   // 紫
+    ]
     
     var body: some View {
         NavigationStack {

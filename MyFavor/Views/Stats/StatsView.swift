@@ -44,7 +44,7 @@ struct StatsView: View {
                                     Text(g.rawValue)
                                         .font(.caption.bold())
                                         .padding(.horizontal, 12).padding(.vertical, 6)
-                                        .background(groupBy == g ? Color.brandRed : Color.cardBackground)
+                                        .background(groupBy == g ? Color.brandInk : Color.cardBackground)
                                         .foregroundStyle(groupBy == g ? .white : .secondary)
                                         .clipShape(Capsule())
                                 }
@@ -53,13 +53,13 @@ struct StatsView: View {
                                 .toggleStyle(.button)
                                 .controlSize(.small)
                                 .font(.caption)
-                                .tint(.brandRed)
+                                .tint(.brandInk)
                             Spacer()
                         }
                         .padding(.horizontal)
                         
                         HStack(spacing: 12) {
-                            totalCard("收礼", totalIncoming, .brandRed, "arrow.down.circle.fill")
+                            totalCard("收礼", totalIncoming, .brandInk, "arrow.down.circle.fill")
                             totalCard("送礼", totalOutgoing, .brandTeal, "arrow.up.circle.fill")
                         }
                         .padding(.horizontal)
@@ -69,7 +69,7 @@ struct StatsView: View {
                             Spacer()
                             Text(Fmt.money(totalIncoming - totalOutgoing))
                                 .font(.title3.bold())
-                                .foregroundStyle((totalIncoming - totalOutgoing) >= 0 ? .brandRed : .brandTeal)
+                                .foregroundStyle((totalIncoming - totalOutgoing) >= 0 ? .brandInk : .brandTeal)
                         }
                         .padding()
                         .background(Color.cardBackground)
@@ -119,7 +119,7 @@ struct StatsView: View {
                 .position(by: .value("类型", item.direction))
             }
             .chartForegroundStyleScale([
-                "收礼": Color.brandRed,
+                "收礼": Color.brandInk,
                 "送礼": Color.brandTeal
             ])
             .frame(height: 220)
@@ -138,7 +138,7 @@ struct StatsView: View {
             HStack {
                 Text(headerLabel).frame(width: 80, alignment: .leading)
                 Spacer()
-                Text("收礼").frame(width: 80, alignment: .trailing).foregroundStyle(.brandRed)
+                Text("收礼").frame(width: 80, alignment: .trailing).foregroundStyle(.brandInk)
                 Text("送礼").frame(width: 80, alignment: .trailing).foregroundStyle(.brandTeal)
                 Text("收送差").frame(width: 80, alignment: .trailing)
             }
@@ -151,7 +151,7 @@ struct StatsView: View {
                 HStack {
                     Text(row.label).frame(width: 80, alignment: .leading)
                     Spacer()
-                    Text(Fmt.amountOnly(row.incoming)).frame(width: 80, alignment: .trailing).foregroundStyle(.brandRed)
+                    Text(Fmt.amountOnly(row.incoming)).frame(width: 80, alignment: .trailing).foregroundStyle(.brandInk)
                     Text(Fmt.amountOnly(row.outgoing)).frame(width: 80, alignment: .trailing).foregroundStyle(.brandTeal)
                     Text(Fmt.amountOnly(row.incoming - row.outgoing))
                         .frame(width: 80, alignment: .trailing)
