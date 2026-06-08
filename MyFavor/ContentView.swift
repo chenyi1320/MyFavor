@@ -22,21 +22,23 @@ struct RootTabView: View {
                 HomeView()
                     .tabItem { Label("礼簿", systemImage: "book.closed.fill") }
                     .tag(Tab.books)
-                
+
                 StatsView()
                     .tabItem { Label("统计", systemImage: "chart.bar.fill") }
                     .tag(Tab.stats)
-                
-                // 中央占位(由浮动按钮覆盖)
+
+                // 中央占位 tab — 显式 disabled,防止误触(原本可点中央空白区)
+                // 同时给 tabItem 一个空标题,UI 看起来与原来一致
                 Color.clear
                     .tabItem { Label("", systemImage: "") }
                     .tag(Tab.center)
-                    
-                
+                    .disabled(true)
+
+
                 ContactsView()
                     .tabItem { Label("联系人", systemImage: "person.2.fill") }
                     .tag(Tab.contacts)
-                
+
                 ProfileView()
                     .tabItem { Label("我的", systemImage: "person.crop.circle.fill") }
                     .tag(Tab.profile)

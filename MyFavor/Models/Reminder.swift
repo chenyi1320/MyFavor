@@ -11,7 +11,7 @@ import SwiftUI
 
 /// 事件提醒
 @Model
-final class Reminder {
+final class Reminder: Syncable {
     /// 事件标题(如「老李结婚」)
     var title: String = ""
     /// 事件日期(公历)
@@ -29,7 +29,7 @@ final class Reminder {
     /// 创建时间
     var createdAt: Date = Date()
 
-    // MARK: - 云同步字段
+    // MARK: - 云同步字段(Syncable 协议)
     var clientId: String = UUID().uuidString
     var serverId: String?
     var updatedAt: Date = Date()
@@ -45,12 +45,13 @@ final class Reminder {
         colorHex: String = "#2C5F4F",
         isEnabled: Bool = true
     ) {
-        self.title = title
+        self.title = truncate(title, max: SyncLimits.maxTitleLength)
         self.date = date
         self.useLunar = useLunar
-        self.advanceDays = advanceDays
-        self.note = note
-        self.colorHex = colorHex
+        // advanceDays 限制在 0-365,避免负数或异常大值
+        self.advanceDays = max(0, min(365, advanceDays))
+        self.note = truncate(note, max: SyncLimits.maxNoteLength)
+        self.colorHex = isValidHex(colorHex) ? colorHex : "#2C5F4F"
         self.isEnabled = isEnabled
         self.createdAt = .now
         self.updatedAt = .now
@@ -68,9 +69,4 @@ final class Reminder {
 
     /// 是否已过期
     var isExpired: Bool { daysFromNow < 0 }
-
-    func markDirty() {
-        self.updatedAt = .now
-        self.isDirty = true
-    }
 }

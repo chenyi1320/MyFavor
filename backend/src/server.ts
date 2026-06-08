@@ -45,10 +45,11 @@ app.use(errorHandler);
 
 app.listen(PORT, () => {
   console.log(`🚀 MyFavor API listening on http://localhost:${PORT}`);
+  // 只输出布尔状态,不打印邮箱/URL 实际值(避免泄露内部域名、账号)
   console.log(`   Resend:     ${process.env.RESEND_API_KEY ? '✅ configured' : '❌ MISSING'}`);
-  console.log(`   From email: ${process.env.RESEND_FROM_EMAIL}`);
-  console.log(`   App URL:    ${process.env.APP_URL}`);
-  console.log(`   Database:   ${process.env.DATABASE_URL?.replace(/:[^:]+@/, ':***@')}`);
+  console.log(`   From email: ${process.env.RESEND_FROM_EMAIL ? '✅ configured' : '⚠️  using default'}`);
+  console.log(`   App URL:    ${process.env.APP_URL ? '✅ configured' : '⚠️  using default'}`);
+  console.log(`   Database:   ${process.env.DATABASE_URL ? '✅ configured' : '❌ MISSING'}`);
 });
 
 

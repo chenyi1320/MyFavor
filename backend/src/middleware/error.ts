@@ -15,12 +15,12 @@ export class HttpError extends Error {
   }
 }
 
-// Prisma 已知错误码 → 业务文案映射(不暴露 SQL/字段细节)
-const PRISMA_ERROR_MESSAGES: Record<string, string> = {
-  P2002: '数据已存在,请勿重复提交',
-  P2025: '记录不存在或已被删除',
-  P2003: '关联数据不存在',
-  P2010: '请求参数不合法',
+// Prisma 已知错误码 → 业务文案 + 正确的 HTTP 状态码(语义化)
+const PRISMA_ERROR_MESSAGES: Record<string, { msg: string; status: number }> = {
+  P2002: { msg: '数据已存在,请勿重复提交', status: 409 }, // Unique constraint
+  P2025: { msg: '记录不存在或已被删除', status: 404 },     // Not found
+  P2003: { msg: '关联数据不存在', status: 400 },          // Foreign key violation
+  P2010: { msg: '请求参数不合法', status: 400 },          // Invalid input
 };
 
 export function errorHandler(
@@ -34,11 +34,20 @@ export function errorHandler(
   console.error('[ERROR]', {
     name: err?.name,
     code: err?.code,
+    type: err?.type,
+    status: err?.statusCode ?? err?.status,
     message: err?.message,
     stack: process.env.NODE_ENV === 'development' ? err?.stack : undefined,
   });
 
-  const status = err.statusCode || err.status || 500;
+  // 0. express.json() 解析失败(畸形 JSON)→ 400
+  if (err?.type === 'entity.parse.failed') {
+    return res.status(400).json({ error: '请求体不是合法 JSON' });
+  }
+  // 0.1 请求体超大 → 413
+  if (err?.type === 'entity.too.large') {
+    return res.status(413).json({ error: '请求体过大' });
+  }
 
   // 1. 业务主动抛的 HttpError → 安全暴露 message
   if (err instanceof HttpError) {
@@ -48,11 +57,10 @@ export function errorHandler(
     });
   }
 
-  // 2. Prisma 已知错误 → 映射为业务文案(不暴露 SQL)
+  // 2. Prisma 已知错误 → 映射为业务文案(不暴露 SQL)+ 正确的状态码
   if (err?.code && PRISMA_ERROR_MESSAGES[err.code]) {
-    return res.status(status === 500 ? 400 : status).json({
-      error: PRISMA_ERROR_MESSAGES[err.code],
-    });
+    const { msg, status } = PRISMA_ERROR_MESSAGES[err.code];
+    return res.status(status).json({ error: msg, code: err.code });
   }
 
   // 3. 未知错误 → 统一回 500,不暴露内部信息

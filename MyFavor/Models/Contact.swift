@@ -10,7 +10,7 @@ import SwiftData
 
 /// 联系人
 @Model
-final class Contact {
+final class Contact: Syncable {
     /// 姓名
     var name: String = ""
     /// 拼音首字母(用于排序分组,如「张」-> "Z")
@@ -23,19 +23,22 @@ final class Contact {
     var avatarEmoji: String = "🙂"
     /// 备注
     var note: String = ""
-    /// 生日(可选)
+    /// 生日(可选,只存月日更稳定,跨时区不变)
+    /// 保留 Date 是为了兼容旧数据,新代码应该用 birthdayMonthDay
     var birthday: Date?
+    /// 生日月日(MM-DD 格式字符串,跨时区稳定)
+    var birthdayMonthDay: String = ""
     /// 创建时间
     var createdAt: Date = Date()
 
-    // MARK: - 云同步字段
+    // MARK: - 云同步字段(Syncable 协议)
     var clientId: String = UUID().uuidString
     var serverId: String?
     var updatedAt: Date = Date()
     var isDirty: Bool = true
     var deletedAt: Date?
 
-    /// 反向关联 — 该联系人的所有交易
+    /// 反向关联 — 该联系人的所有交易(nullify:删联系人保留交易)
     @Relationship(deleteRule: .nullify, inverse: \Transaction.contact)
     var transactions: [Transaction] = []
 
@@ -48,12 +51,14 @@ final class Contact {
         note: String = "",
         birthday: Date? = nil
     ) {
-        self.name = name
-        self.pinyinInitial = pinyinInitial.uppercased()
-        self.phone = phone
+        self.name = truncate(name, max: SyncLimits.maxNameLength)
+        // pinyinInitial 应该是单字母,过长截断
+        let initial = pinyinInitial.uppercased()
+        self.pinyinInitial = String(initial.prefix(1))
+        self.phone = truncate(phone, max: SyncLimits.maxPhoneLength)
         self.relationship = relationship
         self.avatarEmoji = avatarEmoji
-        self.note = note
+        self.note = truncate(note, max: SyncLimits.maxNoteLength)
         self.birthday = birthday
         self.createdAt = .now
         self.updatedAt = .now
@@ -80,9 +85,4 @@ final class Contact {
 
     /// 总笔数
     var transactionCount: Int { transactions.filter { $0.deletedAt == nil }.count }
-
-    func markDirty() {
-        self.updatedAt = .now
-        self.isDirty = true
-    }
 }

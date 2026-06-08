@@ -11,7 +11,7 @@ import SwiftData
 /// 礼簿 — 一个事件(如「我结婚」「女儿周岁」)对应一本礼簿,
 /// 里面记录该事件的所有来往。
 @Model
-final class LedgerBook {
+final class LedgerBook: Syncable {
     /// 礼簿标题(如「老爸六十大寿」)
     var title: String = ""
     /// 事件类型
@@ -29,19 +29,16 @@ final class LedgerBook {
     /// 创建时间
     var createdAt: Date = Date()
 
-    // MARK: - 云同步字段
-    /// 客户端 UUID(创建时即生成,跨设备唯一)
+    // MARK: - 云同步字段(Syncable 协议)
     var clientId: String = UUID().uuidString
-    /// 服务器 ID(同步成功后由服务器返回)
     var serverId: String?
-    /// 最后修改时间(用于增量同步)
     var updatedAt: Date = Date()
-    /// 本地是否有未推送的修改
     var isDirty: Bool = true
-    /// 软删除标记(同步删除用)
     var deletedAt: Date?
 
     /// 反向关联 — 来往记录
+    /// 注意:SwiftData @Relationship 的 cascade 与业务"软删除"语义有冲突
+    /// 调用方需要先软删所有 transactions(标记 deletedAt),再调硬删,避免丢未同步数据
     @Relationship(deleteRule: .cascade, inverse: \Transaction.book)
     var transactions: [Transaction] = []
 
@@ -54,12 +51,13 @@ final class LedgerBook {
         coverColorHex: String = "#2C5F4F",
         isClosed: Bool = false
     ) {
-        self.title = title
+        self.title = truncate(title, max: SyncLimits.maxTitleLength)
         self.category = category
         self.direction = direction
         self.eventDate = eventDate
-        self.note = note
-        self.coverColorHex = coverColorHex
+        self.note = truncate(note, max: SyncLimits.maxNoteLength)
+        // 校验 hex 颜色格式(6 位),非法用默认
+        self.coverColorHex = isValidHex(coverColorHex) ? coverColorHex : "#2C5F4F"
         self.isClosed = isClosed
         self.createdAt = .now
         self.updatedAt = .now
@@ -75,10 +73,10 @@ final class LedgerBook {
 
     /// 笔数
     var count: Int { transactions.filter { $0.deletedAt == nil }.count }
+}
 
-    /// 标记本地修改 — 调用此方法替代直接 save
-    func markDirty() {
-        self.updatedAt = .now
-        self.isDirty = true
-    }
+// MARK: - Hex 颜色校验
+private let hexPattern = "^#[0-9A-Fa-f]{6}$"
+func isValidHex(_ s: String) -> Bool {
+    s.range(of: hexPattern, options: .regularExpression) != nil
 }

@@ -15,8 +15,16 @@ function getSecret(): string {
 }
 const SECRET = getSecret();
 
+// === 解析 JWT_EXPIRES_IN 为毫秒(同时供 token 签名和返回给客户端) ===
+// 避免 EXPIRES_IN 与 EXPIRES_MS 不一致导致客户端误判有效期
 const EXPIRES_IN = process.env.JWT_EXPIRES_IN || '30d';
-const EXPIRES_MS = 30 * 24 * 3600 * 1000; // fallback 30 天
+function parseExpiryToMs(s: string): number {
+  const m = s.match(/^(\d+)([smhd])$/);
+  if (!m) return 30 * 24 * 3600 * 1000; // fallback 30 天
+  const n = parseInt(m[1], 10);
+  return n * { s: 1000, m: 60_000, h: 3_600_000, d: 86_400_000 }[m[2] as 's'|'m'|'h'|'d'];
+}
+const EXPIRES_MS = parseExpiryToMs(EXPIRES_IN);
 
 export interface JWTPayload {
   sub: string;     // user id
@@ -24,7 +32,7 @@ export interface JWTPayload {
 
 export function signJWT(payload: JWTPayload): { token: string; expiresAt: Date } {
   const token = jwt.sign(payload, SECRET, { expiresIn: EXPIRES_IN } as SignOptions);
-  // 直接计算过期时间(避免依赖 jwt.decode 的 fallback)
+  // 与签名共用同一个 EXPIRES_MS,确保 token 实际过期与返回给客户端的一致
   const expiresAt = new Date(Date.now() + EXPIRES_MS);
   return { token, expiresAt };
 }

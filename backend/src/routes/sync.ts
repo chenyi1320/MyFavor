@@ -6,6 +6,10 @@ import { requireAuth } from '../middleware/auth.js';
 export const syncRoutes = Router();
 syncRoutes.use(requireAuth);
 
+// 单次同步的最大记录数(防 DoS / 超大请求)
+const MAX_ITEMS_PER_PUSH = 500;
+const MAX_ITEMS_PER_PULL = 1000;
+
 // ===== helpers =====
 function snakeToCamel(obj: any): any {
   if (Array.isArray(obj)) return obj.map(snakeToCamel);
@@ -93,105 +97,139 @@ syncRoutes.post('/push', async (req, res, next) => {
     const transactions = (body.transactions || []) as any[];
     const reminders    = (body.reminders    || []) as any[];
 
-    // Process in dependency order:Contacts & Books first, then Transactions
-    const bookMappings = await Promise.all(ledgerBooks.map(async (b) => {
-      const data = {
-        title: b.title,
-        categoryRaw: b.categoryRaw,
-        directionRaw: b.directionRaw,
-        eventDate: new Date(b.eventDate),
-        note: b.note ?? '',
-        coverColorHex: b.coverColorHex ?? '#2C5F4F',
-        isClosed: !!b.isClosed,
-        deletedAt: b.deletedAt ? new Date(b.deletedAt) : null,
-      };
-      const row = await prisma.ledgerBook.upsert({
-        where: { userId_clientId: { userId, clientId: b.clientId } },
-        create: { ...data, userId, clientId: b.clientId },
-        update: data,
+    // 数量限制(防 DoS / 巨大请求)
+    const total = ledgerBooks.length + contacts.length + transactions.length + reminders.length;
+    if (total > MAX_ITEMS_PER_PUSH) {
+      return res.status(413).json({
+        error: `单次推送数据过多,最多 ${MAX_ITEMS_PER_PUSH} 条`,
       });
-      return { clientId: b.clientId, serverId: row.id };
-    }));
+    }
 
-    const contactMappings = await Promise.all(contacts.map(async (c) => {
-      const data = {
-        name: c.name,
-        pinyinInitial: c.pinyinInitial ?? '#',
-        phone: c.phone ?? '',
-        relationshipRaw: c.relationshipRaw ?? '朋友',
-        avatarEmoji: c.avatarEmoji ?? '🙂',
-        note: c.note ?? '',
-        birthday: c.birthday ? new Date(c.birthday) : null,
-        deletedAt: c.deletedAt ? new Date(c.deletedAt) : null,
-      };
-      const row = await prisma.contact.upsert({
-        where: { userId_clientId: { userId, clientId: c.clientId } },
-        create: { ...data, userId, clientId: c.clientId },
-        update: data,
-      });
-      return { clientId: c.clientId, serverId: row.id };
-    }));
+    // === 性能优化:一次性预加载所有 book/contact 的 clientId → serverId 映射 ===
+    // 避免 transaction 处理时的 N+1 查询(原来每笔 tx 触发 2 次 findUnique)
+    const bookClientIds = new Set<string>();
+    const contactClientIds = new Set<string>();
+    for (const t of transactions) {
+      if (t.bookClientId) bookClientIds.add(t.bookClientId);
+      if (t.contactClientId) contactClientIds.add(t.contactClientId);
+    }
+    for (const b of ledgerBooks) bookClientIds.add(b.clientId);
+    for (const c of contacts) contactClientIds.add(c.clientId);
 
-    const txMappings = await Promise.all(transactions.map(async (t) => {
-      // Resolve foreign book / contact via clientId
-      let bookId: string | null = null;
-      let contactId: string | null = null;
-      if (t.bookClientId) {
-        const b = await prisma.ledgerBook.findUnique({
-          where: { userId_clientId: { userId, clientId: t.bookClientId } },
+    const [existingBooks, existingContacts] = await Promise.all([
+      bookClientIds.size > 0
+        ? prisma.ledgerBook.findMany({
+            where: { userId, clientId: { in: Array.from(bookClientIds) } },
+            select: { id: true, clientId: true },
+          })
+        : Promise.resolve([] as { id: string; clientId: string }[]),
+      contactClientIds.size > 0
+        ? prisma.contact.findMany({
+            where: { userId, clientId: { in: Array.from(contactClientIds) } },
+            select: { id: true, clientId: true },
+          })
+        : Promise.resolve([] as { id: string; clientId: string }[]),
+    ]);
+    const bookIdMap = new Map(existingBooks.map((b) => [b.clientId, b.id]));
+    const contactIdMap = new Map(existingContacts.map((c) => [c.clientId, c.id]));
+
+    // === 整个 push 包在事务里:任一失败回滚 ===
+    const result = await prisma.$transaction(async (tx) => {
+      const bookMappings: { clientId: string; serverId: string }[] = [];
+      for (const b of ledgerBooks) {
+        const data = {
+          title: b.title,
+          categoryRaw: b.categoryRaw,
+          directionRaw: b.directionRaw,
+          eventDate: new Date(b.eventDate),
+          note: b.note ?? '',
+          coverColorHex: b.coverColorHex ?? '#2C5F4F',
+          isClosed: !!b.isClosed,
+          deletedAt: b.deletedAt ? new Date(b.deletedAt) : null,
+        };
+        const row = await tx.ledgerBook.upsert({
+          where: { userId_clientId: { userId, clientId: b.clientId } },
+          create: { ...data, userId, clientId: b.clientId },
+          update: data,
         });
-        bookId = b?.id ?? null;
+        bookMappings.push({ clientId: b.clientId, serverId: row.id });
+        bookIdMap.set(b.clientId, row.id);
       }
-      if (t.contactClientId) {
-        const c = await prisma.contact.findUnique({
-          where: { userId_clientId: { userId, clientId: t.contactClientId } },
-        });
-        contactId = c?.id ?? null;
-      }
-      const data = {
-        amount: t.amount,
-        giftKindRaw: t.giftKindRaw ?? '礼金',
-        itemDescription: t.itemDescription ?? '',
-        date: new Date(t.date),
-        note: t.note ?? '',
-        bookClientId: t.bookClientId ?? null,
-        bookId,
-        contactClientId: t.contactClientId ?? null,
-        contactId,
-        deletedAt: t.deletedAt ? new Date(t.deletedAt) : null,
-      };
-      const row = await prisma.transaction.upsert({
-        where: { userId_clientId: { userId, clientId: t.clientId } },
-        create: { ...data, userId, clientId: t.clientId },
-        update: data,
-      });
-      return { clientId: t.clientId, serverId: row.id };
-    }));
 
-    const reminderMappings = await Promise.all(reminders.map(async (r) => {
-      const data = {
-        title: r.title,
-        date: new Date(r.date),
-        useLunar: !!r.useLunar,
-        advanceDays: r.advanceDays ?? 7,
-        note: r.note ?? '',
-        colorHex: r.colorHex ?? '#2C5F4F',
-        isEnabled: r.isEnabled !== false,
-        deletedAt: r.deletedAt ? new Date(r.deletedAt) : null,
-      };
-      const row = await prisma.reminder.upsert({
-        where: { userId_clientId: { userId, clientId: r.clientId } },
-        create: { ...data, userId, clientId: r.clientId },
-        update: data,
-      });
-      return { clientId: r.clientId, serverId: row.id };
-    }));
+      const contactMappings: { clientId: string; serverId: string }[] = [];
+      for (const c of contacts) {
+        const data = {
+          name: c.name,
+          pinyinInitial: c.pinyinInitial ?? '#',
+          phone: c.phone ?? '',
+          relationshipRaw: c.relationshipRaw ?? '朋友',
+          avatarEmoji: c.avatarEmoji ?? '🙂',
+          note: c.note ?? '',
+          birthday: c.birthday ? new Date(c.birthday) : null,
+          deletedAt: c.deletedAt ? new Date(c.deletedAt) : null,
+        };
+        const row = await tx.contact.upsert({
+          where: { userId_clientId: { userId, clientId: c.clientId } },
+          create: { ...data, userId, clientId: c.clientId },
+          update: data,
+        });
+        contactMappings.push({ clientId: c.clientId, serverId: row.id });
+        contactIdMap.set(c.clientId, row.id);
+      }
+
+      const txMappings: { clientId: string; serverId: string }[] = [];
+      for (const t of transactions) {
+        // 用本地 Map 查 bookId/contactId,0 次 DB 查询
+        const bookId = t.bookClientId ? (bookIdMap.get(t.bookClientId) ?? null) : null;
+        const contactId = t.contactClientId ? (contactIdMap.get(t.contactClientId) ?? null) : null;
+        const data = {
+          amount: t.amount,
+          giftKindRaw: t.giftKindRaw ?? '礼金',
+          itemDescription: t.itemDescription ?? '',
+          date: new Date(t.date),
+          note: t.note ?? '',
+          bookClientId: t.bookClientId ?? null,
+          bookId,
+          contactClientId: t.contactClientId ?? null,
+          contactId,
+          deletedAt: t.deletedAt ? new Date(t.deletedAt) : null,
+        };
+        const row = await tx.transaction.upsert({
+          where: { userId_clientId: { userId, clientId: t.clientId } },
+          create: { ...data, userId, clientId: t.clientId },
+          update: data,
+        });
+        txMappings.push({ clientId: t.clientId, serverId: row.id });
+      }
+
+      const reminderMappings: { clientId: string; serverId: string }[] = [];
+      for (const r of reminders) {
+        const data = {
+          title: r.title,
+          date: new Date(r.date),
+          useLunar: !!r.useLunar,
+          advanceDays: r.advanceDays ?? 7,
+          note: r.note ?? '',
+          colorHex: r.colorHex ?? '#2C5F4F',
+          isEnabled: r.isEnabled !== false,
+          deletedAt: r.deletedAt ? new Date(r.deletedAt) : null,
+        };
+        const row = await tx.reminder.upsert({
+          where: { userId_clientId: { userId, clientId: r.clientId } },
+          create: { ...data, userId, clientId: r.clientId },
+          update: data,
+        });
+        reminderMappings.push({ clientId: r.clientId, serverId: row.id });
+      }
+
+      return { bookMappings, contactMappings, txMappings, reminderMappings };
+    });
 
     res.json({
-      ledger_books:  bookMappings.map(m => ({ client_id: m.clientId, server_id: m.serverId })),
-      contacts:      contactMappings.map(m => ({ client_id: m.clientId, server_id: m.serverId })),
-      transactions:  txMappings.map(m => ({ client_id: m.clientId, server_id: m.serverId })),
-      reminders:     reminderMappings.map(m => ({ client_id: m.clientId, server_id: m.serverId })),
+      ledger_books:  result.bookMappings.map(m => ({ client_id: m.clientId, server_id: m.serverId })),
+      contacts:      result.contactMappings.map(m => ({ client_id: m.clientId, server_id: m.serverId })),
+      transactions:  result.txMappings.map(m => ({ client_id: m.clientId, server_id: m.serverId })),
+      reminders:     result.reminderMappings.map(m => ({ client_id: m.clientId, server_id: m.serverId })),
     });
   } catch (err) { next(err); }
 });
@@ -202,34 +240,58 @@ syncRoutes.get('/pull', async (req, res, next) => {
   try {
     const userId = req.user!.sub;
     const since = req.query.since as string | undefined;
-    const sinceDate = since && since.length > 0 ? new Date(since) : new Date(0);
 
+    // 校验 since:空字符串视为拉取全部;非法字符串返回 400
+    let sinceDate = new Date(0);
+    if (since && since.length > 0) {
+      const d = new Date(since);
+      if (isNaN(d.getTime())) {
+        return res.status(400).json({ error: 'Invalid since parameter' });
+      }
+      sinceDate = d;
+    }
+
+    // 共用 serverTime(避免 2 次 new Date() 产生微秒级漂移)
+    const serverTime = new Date();
+
+    // === 分页:每次最多返回 MAX_ITEMS_PER_PULL 条 ===
+    // 客户端如果看到 has_more=true,应再用最后一条的 updatedAt 作为新的 since 继续拉
     const [books, contacts, txs, reminders] = await Promise.all([
       prisma.ledgerBook.findMany({
         where: { userId, updatedAt: { gt: sinceDate } },
         orderBy: { updatedAt: 'asc' },
+        take: MAX_ITEMS_PER_PULL,
       }),
       prisma.contact.findMany({
         where: { userId, updatedAt: { gt: sinceDate } },
         orderBy: { updatedAt: 'asc' },
+        take: MAX_ITEMS_PER_PULL,
       }),
       prisma.transaction.findMany({
         where: { userId, updatedAt: { gt: sinceDate } },
         orderBy: { updatedAt: 'asc' },
+        take: MAX_ITEMS_PER_PULL,
       }),
       prisma.reminder.findMany({
         where: { userId, updatedAt: { gt: sinceDate } },
         orderBy: { updatedAt: 'asc' },
+        take: MAX_ITEMS_PER_PULL,
       }),
     ]);
 
-    res.setHeader('x-server-time', new Date().toISOString());
+    res.setHeader('x-server-time', serverTime.toISOString());
     res.json({
       ledger_books: books.map(dtoFromBook),
       contacts:     contacts.map(dtoFromContact),
       transactions: txs.map(dtoFromTx),
       reminders:    reminders.map(dtoFromReminder),
-      server_time:  new Date().toISOString(),
+      server_time:  serverTime.toISOString(),
+      // 提示客户端是否还有更多数据(任一表 hit limit 就视为还有)
+      has_more:
+        books.length === MAX_ITEMS_PER_PULL ||
+        contacts.length === MAX_ITEMS_PER_PULL ||
+        txs.length === MAX_ITEMS_PER_PULL ||
+        reminders.length === MAX_ITEMS_PER_PULL,
     });
   } catch (err) { next(err); }
 });

@@ -16,9 +16,15 @@ export function requireAuth(req: Request, res: Response, next: NextFunction) {
   }
   try {
     const token = header.substring('Bearer '.length);
-    req.user = verifyJWT(token);
+    const payload = verifyJWT(token);
+    // 强制校验 sub 存在(避免后续 req.user!.sub 拿到 undefined)
+    if (!payload?.sub || typeof payload.sub !== 'string') {
+      return res.status(401).json({ error: 'Invalid token payload' });
+    }
+    req.user = payload;
     next();
-  } catch (err: any) {
+  } catch (err) {
+    // 不打印 err.message(可能含 token 片段),只记录布尔状态
     return res.status(401).json({ error: 'Invalid or expired token' });
   }
 }

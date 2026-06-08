@@ -23,12 +23,17 @@ struct MyFavorApp: App {
         do {
             return try ModelContainer(for: schema, configurations: [config])
         } catch {
-            fatalError("无法创建 ModelContainer: \(error)")
+            // 降级:磁盘失败时尝试内存模式,避免 App 闪退
+            print("[FATAL] SwiftData 容器创建失败,降级到内存模式: \(error)")
+            let fallback = ModelConfiguration(schema: schema, isStoredInMemoryOnly: true)
+            // 如果连内存也失败,才是真没救
+            return try! ModelContainer(for: schema, configurations: [fallback])
         }
     }()
 
     @State private var auth = AuthService.shared
-    @State private var didSkipLogin = false   // 用户点了「先逛逛」
+    /// "先逛逛"状态 — 持久化到 UserDefaults,App 重启后保留
+    @AppStorage("myfavor.didSkipLogin") private var didSkipLogin = false
     @Environment(\.scenePhase) private var scenePhase
 
     var body: some Scene {
@@ -38,9 +43,9 @@ struct MyFavorApp: App {
                     RootTabView()
                         .tint(.brandInk)
                         .task {
-                            // 首次启动种子数据
+                            // 首次启动种子数据(只在本地使用 / 未登录时)
                             SampleData.seedIfNeeded(in: container.mainContext)
-                            // 已登录则自动同步
+                            // 已登录则自动同步(放在 seed 之后,避免种子数据被误推)
                             if auth.isLoggedIn {
                                 await SyncEngine.shared.syncNow(context: container.mainContext)
                             }
@@ -72,14 +77,14 @@ struct MyFavorApp: App {
               let comps = URLComponents(url: url, resolvingAgainstBaseURL: false),
               let token = comps.queryItems?.first(where: { $0.name == "token" })?.value
         else {
-            print("[DeepLink] unrecognized: \(url)")
+            // 不打印 URL(可能含 token 或邮箱)
             return
         }
-        print("[DeepLink] magic token received, verifying...")
+        // 不打印 "magic token received" 这类可能含敏感信息的日志
         Task {
             let ok = await MagicLinkService.shared.verifyToken(token)
             if ok {
-                didSkipLogin = false // 关闭「逛逛」状态,进入正式登录
+                didSkipLogin = false
             }
         }
     }

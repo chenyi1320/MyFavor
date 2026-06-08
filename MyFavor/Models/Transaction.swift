@@ -10,7 +10,7 @@ import SwiftData
 
 /// 单条礼尚往来记录(收/送礼)
 @Model
-final class Transaction {
+final class Transaction: Syncable {
     /// 金额(支持小数)
     var amount: Decimal = Decimal(0)
     /// 礼品类型(礼金 / 礼品)
@@ -28,7 +28,7 @@ final class Transaction {
     /// 创建时间
     var createdAt: Date = Date()
 
-    // MARK: - 云同步字段
+    // MARK: - 云同步字段(Syncable 协议)
     var clientId: String = UUID().uuidString
     var serverId: String?
     var updatedAt: Date = Date()
@@ -44,21 +44,17 @@ final class Transaction {
         book: LedgerBook? = nil,
         contact: Contact? = nil
     ) {
-        self.amount = amount
+        // 金额校验:非法时 fallback 为 0(避免负数/NaN/超大)
+        self.amount = sanitizeAmount(amount) ?? 0
         self.giftKind = giftKind
-        self.itemDescription = itemDescription
+        self.itemDescription = truncate(itemDescription, max: SyncLimits.maxNoteLength)
         self.date = date
-        self.note = note
+        self.note = truncate(note, max: SyncLimits.maxNoteLength)
         self.book = book
         self.contact = contact
         self.createdAt = .now
         self.updatedAt = .now
         self.clientId = UUID().uuidString
-        self.isDirty = true
-    }
-
-    func markDirty() {
-        self.updatedAt = .now
         self.isDirty = true
     }
 }

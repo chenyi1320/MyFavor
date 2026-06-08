@@ -14,7 +14,7 @@ enum SampleData {
         // 已存在数据则跳过
         let bookCount = (try? context.fetchCount(FetchDescriptor<LedgerBook>())) ?? 0
         guard bookCount == 0 else { return }
-        
+
         // ===== 联系人 =====
         let zhangSan  = Contact(name: "张三",   pinyinInitial: "Z", phone: "13800138001", relationship: .friend,    avatarEmoji: "🧑")
         let liSi      = Contact(name: "李四",   pinyinInitial: "L", phone: "13800138002", relationship: .colleague, avatarEmoji: "👨")
@@ -23,7 +23,7 @@ enum SampleData {
         let dajiu     = Contact(name: "大舅",   pinyinInitial: "D", phone: "13800138005", relationship: .family,    avatarEmoji: "👴")
         let daGu      = Contact(name: "大姑",   pinyinInitial: "D", phone: "13800138006", relationship: .family,    avatarEmoji: "👵")
         [zhangSan, liSi, wangWu, amei, dajiu, daGu].forEach { context.insert($0) }
-        
+
         // ===== 礼簿 =====
         let weddingBook = LedgerBook(
             title: "我的结婚",
@@ -48,7 +48,7 @@ enum SampleData {
             coverColorHex: "#2BB6A6"
         )
         [weddingBook, zhouSuiBook, shouYanBook].forEach { context.insert($0) }
-        
+
         // ===== 来往明细 =====
         let tx1 = Transaction(amount: 2000, giftKind: .cash, date: weddingBook.eventDate, book: weddingBook, contact: zhangSan)
         let tx2 = Transaction(amount: 1000, giftKind: .cash, date: weddingBook.eventDate, book: weddingBook, contact: liSi)
@@ -60,7 +60,7 @@ enum SampleData {
         let tx8 = Transaction(amount: 200,  giftKind: .item, itemDescription: "保健品",
                               date: shouYanBook.eventDate, book: shouYanBook, contact: zhangSan)
         [tx1, tx2, tx3, tx4, tx5, tx6, tx7, tx8].forEach { context.insert($0) }
-        
+
         // ===== 事件提醒 =====
         let r1 = Reminder(title: "老李结婚",
                           date: Calendar.current.date(byAdding: .day, value: 6,   to: .now) ?? .now,
@@ -75,7 +75,31 @@ enum SampleData {
                           date: Calendar.current.date(byAdding: .day, value: 135, to: .now) ?? .now,
                           advanceDays: 30, colorHex: "#9B6BFF")
         [r1, r2, r3, r4].forEach { context.insert($0) }
-        
+
+        // === 关键:把所有种子数据标记为非 dirty ===
+        // 否则 SyncEngine 第一次 sync 时会把这些种子数据推到服务器
+        // → 污染用户实际数据(账号注销/迁移时可能误传)
+        markNotDirty(in: context)
+
         try? context.save()
+    }
+
+    @MainActor
+    private static func markNotDirty(in context: ModelContext) {
+        // 把所有刚 insert 的实体的 isDirty 设为 false
+        // (不能用 Predicate 查 isDirty==true,因为我们刚 set 的是 true)
+        // 用 fetchAll + 内存设值
+        if let books = try? context.fetch(FetchDescriptor<LedgerBook>()) {
+            books.forEach { $0.isDirty = false }
+        }
+        if let contacts = try? context.fetch(FetchDescriptor<Contact>()) {
+            contacts.forEach { $0.isDirty = false }
+        }
+        if let txs = try? context.fetch(FetchDescriptor<Transaction>()) {
+            txs.forEach { $0.isDirty = false }
+        }
+        if let reminders = try? context.fetch(FetchDescriptor<Reminder>()) {
+            reminders.forEach { $0.isDirty = false }
+        }
     }
 }

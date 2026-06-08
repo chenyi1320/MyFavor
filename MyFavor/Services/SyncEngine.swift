@@ -12,24 +12,30 @@
 
 import Foundation
 import SwiftData
+import os
 
 @MainActor
 @Observable
 final class SyncEngine {
     static let shared = SyncEngine()
-    
+
     var isSyncing = false
     var lastSyncDate: Date?
     var lastSyncError: String?
-    
+    /// 同步进度(0-1),用于 UI 显示
+    var progress: Double = 0
+
     private let lastSyncKey = "myfavor.lastSyncAt"
-    
+    private let logger = Logger(subsystem: "com.myfavor.app", category: "Sync")
+    /// 共享 ISO8601 formatter(避免每次 new)
+    private static let iso8601: ISO8601DateFormatter = ISO8601DateFormatter()
+
     private init() {
         if let ts = UserDefaults.standard.object(forKey: lastSyncKey) as? Date {
             lastSyncDate = ts
         }
     }
-    
+
     /// 全量同步入口(推+拉)
     @MainActor
     func syncNow(context: ModelContext) async {
@@ -38,22 +44,30 @@ final class SyncEngine {
             return
         }
         guard !isSyncing else { return }
-        
+
         isSyncing = true
         lastSyncError = nil
-        defer { isSyncing = false }
-        
+        progress = 0
+        defer {
+            isSyncing = false
+            progress = 0
+        }
+
         do {
             try await pushLocalChanges(context: context)
-            try await pullRemoteChanges(context: context)
-            lastSyncDate = .now
+            progress = 0.5
+            let serverTime = try await pullRemoteChanges(context: context)
+            // 用服务器时间作为下次 since,避免本地时钟漂移导致漏同步/重放
+            lastSyncDate = serverTime
             UserDefaults.standard.set(lastSyncDate, forKey: lastSyncKey)
+            progress = 1.0
         } catch {
-            lastSyncError = error.localizedDescription
-            print("[Sync] failed:", error)
+            lastSyncError = (error as? APIError)?.errorDescription ?? "同步失败"
+            // 不打印整个 error(可能含敏感数据)
+            logger.error("同步失败: \(error.localizedDescription, privacy: .public)")
         }
     }
-    
+
     // MARK: - PUSH
     private func pushLocalChanges(context: ModelContext) async throws {
         // 收集所有 dirty 的实体
@@ -69,98 +83,101 @@ final class SyncEngine {
         let dirtyReminders = try context.fetch(FetchDescriptor<Reminder>(
             predicate: #Predicate { $0.isDirty == true }
         ))
-        
+
         guard !dirtyBooks.isEmpty || !dirtyContacts.isEmpty
               || !dirtyTxs.isEmpty || !dirtyReminders.isEmpty else {
-            print("[Sync] nothing to push")
             return
         }
-        
+
         let payload = PushPayload(
             ledgerBooks:  dirtyBooks.map(LedgerBookDTO.init),
             contacts:     dirtyContacts.map(ContactDTO.init),
             transactions: dirtyTxs.map(TransactionDTO.init),
             reminders:    dirtyReminders.map(ReminderDTO.init)
         )
-        
+
         let resp: PushResponse = try await APIClient.shared.request(
             "/sync/push", method: .POST, body: payload
         )
-        
-        // 把 server 返回的 serverId 回写,并清掉 isDirty
+
+        // === 性能优化:把 dirty 数组转成 Dictionary,O(N) 写入回写 ===
+        // 原代码 first(where:) 循环 4 × N × N = O(4N²)
+        let bookMap = Dictionary(uniqueKeysWithValues: dirtyBooks.map { ($0.clientId, $0) })
+        let contactMap = Dictionary(uniqueKeysWithValues: dirtyContacts.map { ($0.clientId, $0) })
+        let txMap = Dictionary(uniqueKeysWithValues: dirtyTxs.map { ($0.clientId, $0) })
+        let reminderMap = Dictionary(uniqueKeysWithValues: dirtyReminders.map { ($0.clientId, $0) })
+
         for mapping in resp.ledgerBooks {
-            if let local = dirtyBooks.first(where: { $0.clientId == mapping.clientId }) {
-                local.serverId = mapping.serverId
-                local.isDirty = false
-            }
+            bookMap[mapping.clientId]?.serverId = mapping.serverId
+            bookMap[mapping.clientId]?.isDirty = false
         }
         for mapping in resp.contacts {
-            if let local = dirtyContacts.first(where: { $0.clientId == mapping.clientId }) {
-                local.serverId = mapping.serverId
-                local.isDirty = false
-            }
+            contactMap[mapping.clientId]?.serverId = mapping.serverId
+            contactMap[mapping.clientId]?.isDirty = false
         }
         for mapping in resp.transactions {
-            if let local = dirtyTxs.first(where: { $0.clientId == mapping.clientId }) {
-                local.serverId = mapping.serverId
-                local.isDirty = false
-            }
+            txMap[mapping.clientId]?.serverId = mapping.serverId
+            txMap[mapping.clientId]?.isDirty = false
         }
         for mapping in resp.reminders {
-            if let local = dirtyReminders.first(where: { $0.clientId == mapping.clientId }) {
-                local.serverId = mapping.serverId
-                local.isDirty = false
-            }
+            reminderMap[mapping.clientId]?.serverId = mapping.serverId
+            reminderMap[mapping.clientId]?.isDirty = false
         }
-        
+
         try context.save()
-        print("[Sync] pushed: books=\(dirtyBooks.count) contacts=\(dirtyContacts.count) txs=\(dirtyTxs.count) reminders=\(dirtyReminders.count)")
     }
-    
+
     // MARK: - PULL
-    private func pullRemoteChanges(context: ModelContext) async throws {
-        let since = lastSyncDate.map { ISO8601DateFormatter().string(from: $0) } ?? ""
+    @discardableResult
+    private func pullRemoteChanges(context: ModelContext) async throws -> Date {
+        let since = lastSyncDate.map { SyncEngine.iso8601.string(from: $0) } ?? ""
         let path = "/sync/pull?since=\(since)"
         let resp: PullResponse = try await APIClient.shared.request(path)
-        
-        // 1. 联系人优先(transaction 引用它)
+
+        // === 性能优化:预加载所有现有记录到 Dictionary,避免每个 DTO 触发 fetch ===
+        // 原代码每个 DTO 都 context.fetch 一次 = N+1
+        let allBooks = try context.fetch(FetchDescriptor<LedgerBook>())
+        let allContacts = try context.fetch(FetchDescriptor<Contact>())
+        let allTxs = try context.fetch(FetchDescriptor<Transaction>())
+        let allReminders = try context.fetch(FetchDescriptor<Reminder>())
+        let bookMap = Dictionary(uniqueKeysWithValues: allBooks.map { ($0.clientId, $0) })
+        let contactMap = Dictionary(uniqueKeysWithValues: allContacts.map { ($0.clientId, $0) })
+        let txMap = Dictionary(uniqueKeysWithValues: allTxs.map { ($0.clientId, $0) })
+        let reminderMap = Dictionary(uniqueKeysWithValues: allReminders.map { ($0.clientId, $0) })
+
+        // 依赖顺序:contacts/books 先,transactions 后
         for dto in resp.contacts {
-            try upsert(dto: dto, in: context)
+            try upsert(dto: dto, existing: contactMap[dto.clientId], in: context)
         }
-        // 2. 礼簿(transaction 引用)
         for dto in resp.ledgerBooks {
-            try upsert(dto: dto, in: context)
+            try upsert(dto: dto, existing: bookMap[dto.clientId], in: context)
         }
-        // 3. 来往
         for dto in resp.transactions {
-            try upsert(dto: dto, in: context)
+            // 查 book/contact 引用不再触发 DB 查询,只在 Map 找
+            let book = dto.bookClientId.flatMap { bookMap[$0] }
+            let contact = dto.contactClientId.flatMap { contactMap[$0] }
+            try upsert(dto: dto, existing: txMap[dto.clientId], book: book, contact: contact, in: context)
         }
-        // 4. 提醒
         for dto in resp.reminders {
-            try upsert(dto: dto, in: context)
+            try upsert(dto: dto, existing: reminderMap[dto.clientId], in: context)
         }
         try context.save()
-        print("[Sync] pulled: books=\(resp.ledgerBooks.count) contacts=\(resp.contacts.count) txs=\(resp.transactions.count) reminders=\(resp.reminders.count)")
+        return resp.serverTime
     }
-    
-    /// 通用 upsert(根据 clientId 匹配,服务器时间更新就覆盖)
-    private func upsert(dto: LedgerBookDTO, in context: ModelContext) throws {
-        let cid = dto.clientId
-        let existing = try context.fetch(FetchDescriptor<LedgerBook>(
-            predicate: #Predicate { $0.clientId == cid }
-        )).first
-        
+
+    /// 通用 upsert(用预加载的 existing,不再触发 fetch)
+    private func upsert(dto: LedgerBookDTO, existing: LedgerBook?, in context: ModelContext) throws {
         if let local = existing {
-            // 软删除
+            // 软删除:直接删
             if dto.deletedAt != nil {
                 context.delete(local)
                 return
             }
-            // 仅当服务器更新更晚才覆盖
+            // LWW:仅当服务器时间更新才覆盖(防止本地未同步的修改被覆盖)
             guard dto.updatedAt > local.updatedAt else { return }
             local.title = dto.title
-            local.category = EventCategory(rawValue: dto.categoryRaw) ?? .other
-            local.direction = Direction(rawValue: dto.directionRaw) ?? .incoming
+            local.category = EventCategory(rawValue: dto.categoryRaw) ?? local.category
+            local.direction = Direction(rawValue: dto.directionRaw) ?? local.direction
             local.eventDate = dto.eventDate
             local.note = dto.note
             local.coverColorHex = dto.coverColorHex
@@ -185,20 +202,15 @@ final class SyncEngine {
             context.insert(new)
         }
     }
-    
-    private func upsert(dto: ContactDTO, in context: ModelContext) throws {
-        let cid = dto.clientId
-        let existing = try context.fetch(FetchDescriptor<Contact>(
-            predicate: #Predicate { $0.clientId == cid }
-        )).first
-        
+
+    private func upsert(dto: ContactDTO, existing: Contact?, in context: ModelContext) throws {
         if let local = existing {
             if dto.deletedAt != nil { context.delete(local); return }
             guard dto.updatedAt > local.updatedAt else { return }
             local.name = dto.name
             local.pinyinInitial = dto.pinyinInitial
             local.phone = dto.phone
-            local.relationship = ContactRelation(rawValue: dto.relationshipRaw) ?? .friend
+            local.relationship = ContactRelation(rawValue: dto.relationshipRaw) ?? local.relationship
             local.avatarEmoji = dto.avatarEmoji
             local.note = dto.note
             local.birthday = dto.birthday
@@ -222,32 +234,13 @@ final class SyncEngine {
             context.insert(new)
         }
     }
-    
-    private func upsert(dto: TransactionDTO, in context: ModelContext) throws {
-        let cid = dto.clientId
-        let existing = try context.fetch(FetchDescriptor<Transaction>(
-            predicate: #Predicate { $0.clientId == cid }
-        )).first
-        
-        // 找关联的 book / contact(by clientId)
-        let bookCid = dto.bookClientId
-        let contactCid = dto.contactClientId
-        let book: LedgerBook? = bookCid.flatMap { id in
-            try? context.fetch(FetchDescriptor<LedgerBook>(
-                predicate: #Predicate { $0.clientId == id }
-            )).first
-        }
-        let contact: Contact? = contactCid.flatMap { id in
-            try? context.fetch(FetchDescriptor<Contact>(
-                predicate: #Predicate { $0.clientId == id }
-            )).first
-        }
-        
+
+    private func upsert(dto: TransactionDTO, existing: Transaction?, book: LedgerBook?, contact: Contact?, in context: ModelContext) throws {
         if let local = existing {
             if dto.deletedAt != nil { context.delete(local); return }
             guard dto.updatedAt > local.updatedAt else { return }
-            local.amount = dto.amount
-            local.giftKind = GiftKind(rawValue: dto.giftKindRaw) ?? .cash
+            local.amount = Decimal(string: dto.amount) ?? local.amount
+            local.giftKind = GiftKind(rawValue: dto.giftKindRaw) ?? local.giftKind
             local.itemDescription = dto.itemDescription
             local.date = dto.date
             local.note = dto.note
@@ -258,7 +251,7 @@ final class SyncEngine {
             local.isDirty = false
         } else if dto.deletedAt == nil {
             let new = Transaction(
-                amount: dto.amount,
+                amount: Decimal(string: dto.amount) ?? 0,
                 giftKind: GiftKind(rawValue: dto.giftKindRaw) ?? .cash,
                 itemDescription: dto.itemDescription,
                 date: dto.date,
@@ -273,13 +266,8 @@ final class SyncEngine {
             context.insert(new)
         }
     }
-    
-    private func upsert(dto: ReminderDTO, in context: ModelContext) throws {
-        let cid = dto.clientId
-        let existing = try context.fetch(FetchDescriptor<Reminder>(
-            predicate: #Predicate { $0.clientId == cid }
-        )).first
-        
+
+    private func upsert(dto: ReminderDTO, existing: Reminder?, in context: ModelContext) throws {
         if let local = existing {
             if dto.deletedAt != nil { context.delete(local); return }
             guard dto.updatedAt > local.updatedAt else { return }
@@ -400,7 +388,8 @@ struct ContactDTO: Codable {
 struct TransactionDTO: Codable {
     let clientId: String
     var serverId: String?
-    let amount: Decimal
+    /// 后端以字符串形式序列化 Decimal(避免 JS 浮点精度问题)
+    let amount: String
     let giftKindRaw: String
     let itemDescription: String
     let date: Date
@@ -409,11 +398,11 @@ struct TransactionDTO: Codable {
     let contactClientId: String?
     let updatedAt: Date
     let deletedAt: Date?
-    
+
     init(_ t: Transaction) {
         self.clientId = t.clientId
         self.serverId = t.serverId
-        self.amount = t.amount
+        self.amount = "\(t.amount)"
         self.giftKindRaw = t.giftKind.rawValue
         self.itemDescription = t.itemDescription
         self.date = t.date
