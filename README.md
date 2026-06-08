@@ -15,7 +15,7 @@
 
 | 特色 | 说明 |
 |---|---|
-| 🏠 **自托管优先** | 一条命令部署到任意云(阿里云 / Render / 自家 VPS) |
+| 🏠 **自托管优先** | 一键脚本部署到阿里云 ECS(详见 [deploy-aliyun-mysql.sh](deploy-aliyun-mysql.sh))|
 | 🔐 **邮箱即账号** | 不绑定 Apple / 微信 / 手机号,无强制实名 |
 | 🆓 **零运营成本** | 邮箱 Magic Link 替代付费 Apple Developer 能力 |
 | 📱 **原生 iOS** | SwiftUI + SwiftData,完全离线优先 |
