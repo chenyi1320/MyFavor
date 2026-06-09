@@ -41,15 +41,11 @@ actor APIClient {
     static let shared = APIClient()
 
     /// 后端基地址 — 切换 dev/prod
-    #if DEBUG
-    // 模拟器调试:用 localhost(本机后端)
-    let baseURL = URL(string: "http://localhost:3000")!
-    #else
-    // 真机 Release:从 Info.plist 读取(避免硬编码到代码)
-    // 上线前在 Xcode Info.plist 中配置 API_BASE_URL 为你的 HTTPS 域名
+    // 统一从 Info.plist 读,模拟器/真机/Debug/Release 都生效
+    // 模拟器调试时,Info.plist 的 API_BASE_URL 设为 http://localhost:3000
+    // 真机调试时,Info.plist 的 API_BASE_URL 设为 ECS 公网 IP
     let baseURL = URL(string: Bundle.main.object(forInfoDictionaryKey: "API_BASE_URL") as? String
-                      ?? "https://api.example.com")!
-    #endif
+                      ?? "http://localhost:3000")!
 
     private let session: URLSession
     private let encoder: JSONEncoder
