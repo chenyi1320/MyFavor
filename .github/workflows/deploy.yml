@@ -64,10 +64,22 @@ jobs:
             echo "时间: $(date '+%Y-%m-%d %H:%M:%S')"
             echo "=========================================="
             
-            # 1. 拉最新代码
+            # 1. 拉最新代码(带重试,规避 ECS 出口网络抖动导致的 GnuTLS recv error)
             echo "📥 [1/6] 拉取最新代码..."
             cd ${{ env.DEPLOY_PATH }}
-            git fetch origin
+            FETCH_OK=0
+            for i in 1 2 3 4 5; do
+              if git fetch origin 2>&1; then
+                FETCH_OK=1
+                break
+              fi
+              echo "⚠️  git fetch 第 $i 次失败, $((i*3))s 后重试..."
+              sleep $((i*3))
+            done
+            if [ "$FETCH_OK" != "1" ]; then
+              echo "❌ 5 次重试后仍无法连接 GitHub,放弃本次部署"
+              exit 1
+            fi
             git reset --hard origin/main
             
             # 2. 装依赖(用国内镜像,绕开 ECS 上可能存在的 ~/.npmrc 干扰)
