@@ -13,12 +13,14 @@ import SwiftData
 /// 字段约束(强制):
 /// - `clientId`: 客户端生成的 UUID(创建时即确定,跨设备唯一)
 /// - `serverId`: 服务器返回的 ID(未同步前为 nil)
+/// - `userId`: 本条记录归属的用户 ID(nil = "先逛逛" 样例数据,已登录用户永远只看到自己的)
 /// - `updatedAt`: 最后修改时间(用于 LWW 冲突解决)
 /// - `isDirty`: 本地有未推送的修改
 /// - `deletedAt`: 软删除时间戳(用于跨端同步删除)
 protocol Syncable: AnyObject {
     var clientId: String { get set }
     var serverId: String? { get set }
+    var userId: String? { get set }
     var updatedAt: Date { get set }
     var isDirty: Bool { get set }
     var deletedAt: Date? { get set }
@@ -29,6 +31,15 @@ extension Syncable {
     func markDirty() {
         self.updatedAt = .now
         self.isDirty = true
+    }
+
+    /// 解析归属用户 ID
+    /// - 显式传参(测试 / 批量种子)优先
+    /// - 否则取 `AuthService.shared.currentUser?.id`(未登录 = nil = 样例数据归属)
+    /// - 调用方必须在 MainActor(所有 UI 创建 Model 的入口都是 MainActor;SampleData 自身也是 @MainActor)
+    static func resolveUserId(_ provided: String?) -> String? {
+        if let provided { return provided }
+        return MainActor.assumeIsolated { AuthService.shared.currentUser?.id }
     }
 }
 

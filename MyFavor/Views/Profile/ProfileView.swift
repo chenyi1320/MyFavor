@@ -11,16 +11,35 @@ import SwiftData
 @MainActor
 struct ProfileView: View {
     @Environment(\.modelContext) private var context
-    @Query private var books: [LedgerBook]
-    @Query private var contacts: [Contact]
-    @Query private var reminders: [Reminder]
+    @Query private var allBooks: [LedgerBook]
+    @Query private var allContacts: [Contact]
+    @Query private var allReminders: [Reminder]
 
     @State private var auth = AuthService.shared
     @State private var sync = SyncEngine.shared
     @State private var showLogin = false
     @State private var showLogoutAlert = false
     @State private var showDeleteAlert = false
-    
+    @State private var showCleanupAlert = false
+    @State private var cleanupSummary: (count: Int, books: Int, contacts: Int, transactions: Int, reminders: Int)?
+
+    /// 当前用户作用域内的 books(已登录:只算本人;未登录:只算样例)
+    private var books: [LedgerBook] {
+        CurrentUserScope.visible(allBooks, keyPath: \.userId)
+    }
+    private var contacts: [Contact] {
+        CurrentUserScope.visible(allContacts, keyPath: \.userId)
+    }
+    private var reminders: [Reminder] {
+        CurrentUserScope.visible(allReminders, keyPath: \.userId)
+    }
+
+    /// 本机"非当前用户"数据条数(用于显示"清理本机其他账号数据"入口)
+    private var otherUsersDataCounts: (books: Int, contacts: Int, transactions: Int, reminders: Int) {
+        let uid = auth.currentUser?.id ?? ""
+        return LocalDataCleaner.otherUserCounts(in: context, excluding: uid)
+    }
+
     var body: some View {
         NavigationStack {
             ZStack {
@@ -31,6 +50,7 @@ struct ProfileView: View {
                         if auth.isLoggedIn { syncCard }
                         statsRow
                         functionList
+                        otherUsersSection
                         if auth.isLoggedIn { dangerZone }
                         Color.clear.frame(height: 80)
                     }
@@ -43,15 +63,40 @@ struct ProfileView: View {
                 Button("取消", role: .cancel) {}
                 Button("退出", role: .destructive) { auth.logout() }
             } message: {
-                Text("退出后本地数据保留,但不再同步")
+                Text("退出后本地数据保留(再次登录同账号可恢复),但不再同步")
             }
             .alert("永久删除账号?", isPresented: $showDeleteAlert) {
                 Button("取消", role: .cancel) {}
                 Button("永久删除", role: .destructive) {
-                    Task { try? await auth.deleteAccount() }
+                    Task {
+                        let uid = auth.currentUser?.id
+                        try? await auth.deleteAccount()
+                        // 后端删除成功后,清理本地该 userId 的全部记录
+                        if let uid, !auth.isLoggedIn {
+                            LocalDataCleaner.cleanup(userId: uid, in: context)
+                        }
+                    }
                 }
             } message: {
-                Text("此操作不可恢复。服务器上的所有云端数据将被删除,本地数据保留。")
+                Text("此操作不可恢复。服务器上的所有云端数据及本机该账号的全部数据都将被删除。")
+            }
+            .alert("清理本机其他账号的数据?", isPresented: $showCleanupAlert) {
+                Button("取消", role: .cancel) {
+                    cleanupSummary = nil
+                }
+                Button("清除", role: .destructive) {
+                    let uid = auth.currentUser?.id ?? ""
+                    _ = LocalDataCleaner.cleanupAllOtherUsers(in: context, excluding: uid)
+                    cleanupSummary = nil
+                }
+            } message: {
+                if let s = cleanupSummary {
+                    Text("""
+                    将立即删除本机 \(s.count) 个其他账号的本地数据(共 \(s.books) 本礼簿、\(s.contacts) 位联系人、\(s.transactions) 笔来往、\(s.reminders) 条提醒)。
+
+    云端不受影响 — 这些账号下次在本机登录时可重新从云端拉取。
+                    """)
+                }
             }
         }
     }
@@ -188,6 +233,57 @@ struct ProfileView: View {
         .background(Color.cardBackground)
         .clipShape(RoundedRectangle(cornerRadius: 16))
         .padding(.horizontal)
+    }
+
+    // MARK: - 清理本机其他账号数据(仅当有数据时显示)
+    @ViewBuilder
+    private var otherUsersSection: some View {
+        let counts = otherUsersDataCounts
+        let total = counts.books + counts.contacts + counts.transactions + counts.reminders
+        if total > 0 {
+            VStack(spacing: 0) {
+                Button {
+                    cleanupSummary = (
+                        count: LocalDataCleaner.findOtherUserIds(
+                            in: context,
+                            excluding: auth.currentUser?.id ?? ""
+                        ).count,
+                        books: counts.books,
+                        contacts: counts.contacts,
+                        transactions: counts.transactions,
+                        reminders: counts.reminders
+                    )
+                    showCleanupAlert = true
+                } label: {
+                    HStack(spacing: 14) {
+                        ZStack {
+                            RoundedRectangle(cornerRadius: 8)
+                                .fill(Color.orange.opacity(0.15))
+                                .frame(width: 32, height: 32)
+                            Image(systemName: "trash.slash.fill")
+                                .foregroundStyle(.orange)
+                        }
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("清理本机其他账号数据")
+                                .foregroundStyle(.primary)
+                            Text("本机残留 \(total) 条其他账号的数据")
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                        }
+                        Spacer()
+                        Image(systemName: "chevron.right")
+                            .font(.caption)
+                            .foregroundStyle(.tertiary)
+                    }
+                    .padding(.horizontal, 14).padding(.vertical, 12)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+            }
+            .background(Color.cardBackground)
+            .clipShape(RoundedRectangle(cornerRadius: 16))
+            .padding(.horizontal)
+        }
     }
     
     // MARK: - 危险操作区(已登录时)

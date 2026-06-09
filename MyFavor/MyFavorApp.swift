@@ -36,6 +36,10 @@ struct MyFavorApp: App {
     @AppStorage("myfavor.didSkipLogin") private var didSkipLogin = false
     @Environment(\.scenePhase) private var scenePhase
 
+    /// v2.0:切账号后,本机检测到其他账号数据时弹确认 alert
+    @State private var showOtherUsersCleanupAlert = false
+    @State private var otherUsersCleanupSummary: (count: Int, books: Int, contacts: Int, transactions: Int, reminders: Int)?
+
     var body: some Scene {
         WindowGroup {
             Group {
@@ -47,7 +51,16 @@ struct MyFavorApp: App {
                             SampleData.seedIfNeeded(in: container.mainContext)
                             // 已登录则自动同步(放在 seed 之后,避免种子数据被误推)
                             if auth.isLoggedIn {
-                                await SyncEngine.shared.syncNow(context: container.mainContext)
+                                // === v2.0:如果本机没有该 userId 的同步记录 → 强制全量拉取 ===
+                                // 场景:新账号首次在本机登录 / 删除账号后用同邮箱重新注册
+                                let lastUserId = UserDefaults.standard.string(forKey: "myfavor.lastSyncUserId")
+                                let currentId = auth.currentUser?.id
+                                let needFullSync = (lastUserId != currentId)
+                                await SyncEngine.shared.syncNow(
+                                    context: container.mainContext,
+                                    forceFull: needFullSync
+                                )
+                                UserDefaults.standard.set(currentId, forKey: "myfavor.lastSyncUserId")
                             }
                         }
                 } else {
@@ -61,6 +74,67 @@ struct MyFavorApp: App {
                     Task {
                         await SyncEngine.shared.syncNow(context: container.mainContext)
                     }
+                }
+            }
+            // 监听用户切换:清除"上次同步用户"标记,触发全量同步
+            // (覆盖"App 已启动后才登录 / 登录一个账号后登出再换另一个"的场景)
+            .onChange(of: auth.currentUser?.id) { _, newId in
+                let lastUserId = UserDefaults.standard.string(forKey: "myfavor.lastSyncUserId")
+                if lastUserId != newId {
+                    // 不同用户(登出后换号 / 登录另一个账号)→ 强制下次 sync 为全量
+                    SyncEngine.shared.lastSyncDate = nil
+                    UserDefaults.standard.removeObject(forKey: "myfavor.lastSyncAt")
+                    UserDefaults.standard.set(newId, forKey: "myfavor.lastSyncUserId")
+                    // 已登录新用户 → 同步完成后,检查本机是否有其他账号数据
+                    if let newId = newId, auth.isLoggedIn {
+                        Task {
+                            await SyncEngine.shared.syncNow(
+                                context: container.mainContext,
+                                forceFull: true
+                            )
+                            // 同步完后再问,避免"先弹出清理 alert 又被新数据淹没"
+                            let counts = LocalDataCleaner.otherUserCounts(
+                                in: container.mainContext, excluding: newId
+                            )
+                            if counts.books + counts.contacts + counts.transactions + counts.reminders > 0 {
+                                otherUsersCleanupSummary = (
+                                    count: LocalDataCleaner.findOtherUserIds(
+                                        in: container.mainContext, excluding: newId
+                                    ).count,
+                                    books: counts.books,
+                                    contacts: counts.contacts,
+                                    transactions: counts.transactions,
+                                    reminders: counts.reminders
+                                )
+                                showOtherUsersCleanupAlert = true
+                            }
+                        }
+                    }
+                }
+            }
+            // 切账号时清理本机其他账号数据的确认 alert
+            .alert(
+                "本机有其他账号的数据",
+                isPresented: $showOtherUsersCleanupAlert
+            ) {
+                Button("保留(仅隐藏)", role: .cancel) {
+                    otherUsersCleanupSummary = nil
+                }
+                Button("清除本机", role: .destructive) {
+                    if let newId = auth.currentUser?.id {
+                        LocalDataCleaner.cleanupAllOtherUsers(
+                            in: container.mainContext, excluding: newId
+                        )
+                    }
+                    otherUsersCleanupSummary = nil
+                }
+            } message: {
+                if let s = otherUsersCleanupSummary {
+                    Text("""
+                    本机残留着 \(s.count) 个其他账号的本地数据(共 \(s.books) 本礼簿、\(s.contacts) 位联系人、\(s.transactions) 笔来往、\(s.reminders) 条提醒)。
+
+    清除后本机不再保留,云端不受影响 — 这些账号下次在本机登录时,可重新从云端拉取。
+                    """)
                 }
             }
             // 邮件 Magic Link 深度链接处理:myfavor://magic?token=xxx

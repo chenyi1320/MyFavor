@@ -26,6 +26,7 @@ function snakeToCamel(obj: any): any {
 
 function dtoFromBook(b: any) {
   return {
+    userId: b.userId,                  // 透传给 iOS,用于本地 userId 字段
     clientId: b.clientId,
     serverId: b.id,
     title: b.title,
@@ -41,6 +42,7 @@ function dtoFromBook(b: any) {
 }
 function dtoFromContact(c: any) {
   return {
+    userId: c.userId,                  // 透传给 iOS
     clientId: c.clientId,
     serverId: c.id,
     name: c.name,
@@ -56,6 +58,7 @@ function dtoFromContact(c: any) {
 }
 function dtoFromTx(t: any) {
   return {
+    userId: t.userId,                  // 透传给 iOS
     clientId: t.clientId,
     serverId: t.id,
     amount: t.amount.toString(),
@@ -71,6 +74,7 @@ function dtoFromTx(t: any) {
 }
 function dtoFromReminder(r: any) {
   return {
+    userId: r.userId,                  // 透传给 iOS
     clientId: r.clientId,
     serverId: r.id,
     title: r.title,

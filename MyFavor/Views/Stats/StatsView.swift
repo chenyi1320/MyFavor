@@ -13,16 +13,17 @@ struct StatsView: View {
     @Query private var allTxs: [Transaction]
     @State private var groupBy: GroupBy = .year
     @State private var cashOnly = false
-    
+
     enum GroupBy: String, CaseIterable, Identifiable {
         case year = "按年", month = "按月", relation = "按关系"
         var id: String { rawValue }
     }
-    
+
     private var filteredTxs: [Transaction] {
-        cashOnly ? allTxs.filter { $0.giftKind == .cash } : allTxs
+        let visible = CurrentUserScope.visible(allTxs, keyPath: \.userId)
+        return cashOnly ? visible.filter { $0.giftKind == .cash } : visible
     }
-    
+
     private var totalIncoming: Decimal {
         filteredTxs.filter { $0.book?.direction == .incoming }.reduce(0) { $0 + $1.amount }
     }

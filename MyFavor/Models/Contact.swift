@@ -34,6 +34,7 @@ final class Contact: Syncable {
     // MARK: - 云同步字段(Syncable 协议)
     var clientId: String = UUID().uuidString
     var serverId: String?
+    var userId: String?
     var updatedAt: Date = Date()
     var isDirty: Bool = true
     var deletedAt: Date?
@@ -49,7 +50,8 @@ final class Contact: Syncable {
         relationship: ContactRelation = .friend,
         avatarEmoji: String = "🙂",
         note: String = "",
-        birthday: Date? = nil
+        birthday: Date? = nil,
+        userId: String? = nil
     ) {
         self.name = truncate(name, max: SyncLimits.maxNameLength)
         // pinyinInitial 应该是单字母,过长截断
@@ -63,6 +65,7 @@ final class Contact: Syncable {
         self.createdAt = .now
         self.updatedAt = .now
         self.clientId = UUID().uuidString
+        self.userId = Self.resolveUserId(userId)
         self.isDirty = true
     }
 

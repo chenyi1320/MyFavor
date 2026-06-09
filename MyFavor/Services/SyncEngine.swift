@@ -37,13 +37,20 @@ final class SyncEngine {
     }
 
     /// 全量同步入口(推+拉)
+    /// - Parameter forceFull: true 时忽略 lastSyncDate,拉取该用户云端所有数据
+    ///   用于"新账号在本机首次登录"或"删除账号后该邮箱重新注册"场景
     @MainActor
-    func syncNow(context: ModelContext) async {
+    func syncNow(context: ModelContext, forceFull: Bool = false) async {
         guard AuthService.shared.isLoggedIn else {
             lastSyncError = "未登录,无法同步"
             return
         }
         guard !isSyncing else { return }
+
+        if forceFull {
+            lastSyncDate = nil
+            UserDefaults.standard.removeObject(forKey: lastSyncKey)
+        }
 
         isSyncing = true
         lastSyncError = nil
@@ -182,6 +189,7 @@ final class SyncEngine {
             local.note = dto.note
             local.coverColorHex = dto.coverColorHex
             local.isClosed = dto.isClosed
+            local.userId = dto.userId ?? local.userId   // 同步后端归属(防止本机残留 userId 错位)
             local.updatedAt = dto.updatedAt
             local.serverId = dto.serverId
             local.isDirty = false
@@ -193,7 +201,8 @@ final class SyncEngine {
                 eventDate: dto.eventDate,
                 note: dto.note,
                 coverColorHex: dto.coverColorHex,
-                isClosed: dto.isClosed
+                isClosed: dto.isClosed,
+                userId: dto.userId
             )
             new.clientId = dto.clientId
             new.serverId = dto.serverId
@@ -214,6 +223,7 @@ final class SyncEngine {
             local.avatarEmoji = dto.avatarEmoji
             local.note = dto.note
             local.birthday = dto.birthday
+            local.userId = dto.userId ?? local.userId
             local.updatedAt = dto.updatedAt
             local.serverId = dto.serverId
             local.isDirty = false
@@ -225,7 +235,8 @@ final class SyncEngine {
                 relationship: ContactRelation(rawValue: dto.relationshipRaw) ?? .friend,
                 avatarEmoji: dto.avatarEmoji,
                 note: dto.note,
-                birthday: dto.birthday
+                birthday: dto.birthday,
+                userId: dto.userId
             )
             new.clientId = dto.clientId
             new.serverId = dto.serverId
@@ -246,6 +257,7 @@ final class SyncEngine {
             local.note = dto.note
             local.book = book
             local.contact = contact
+            local.userId = dto.userId ?? local.userId
             local.updatedAt = dto.updatedAt
             local.serverId = dto.serverId
             local.isDirty = false
@@ -257,7 +269,8 @@ final class SyncEngine {
                 date: dto.date,
                 note: dto.note,
                 book: book,
-                contact: contact
+                contact: contact,
+                userId: dto.userId
             )
             new.clientId = dto.clientId
             new.serverId = dto.serverId
@@ -278,6 +291,7 @@ final class SyncEngine {
             local.note = dto.note
             local.colorHex = dto.colorHex
             local.isEnabled = dto.isEnabled
+            local.userId = dto.userId ?? local.userId
             local.updatedAt = dto.updatedAt
             local.serverId = dto.serverId
             local.isDirty = false
@@ -289,7 +303,8 @@ final class SyncEngine {
                 advanceDays: dto.advanceDays,
                 note: dto.note,
                 colorHex: dto.colorHex,
-                isEnabled: dto.isEnabled
+                isEnabled: dto.isEnabled,
+                userId: dto.userId
             )
             new.clientId = dto.clientId
             new.serverId = dto.serverId
@@ -330,6 +345,7 @@ struct PullResponse: Codable {
 }
 
 struct LedgerBookDTO: Codable {
+    var userId: String?
     let clientId: String
     var serverId: String?
     let title: String
@@ -341,8 +357,9 @@ struct LedgerBookDTO: Codable {
     let isClosed: Bool
     let updatedAt: Date
     let deletedAt: Date?
-    
+
     init(_ b: LedgerBook) {
+        self.userId = b.userId
         self.clientId = b.clientId
         self.serverId = b.serverId
         self.title = b.title
@@ -358,6 +375,7 @@ struct LedgerBookDTO: Codable {
 }
 
 struct ContactDTO: Codable {
+    var userId: String?
     let clientId: String
     var serverId: String?
     let name: String
@@ -369,8 +387,9 @@ struct ContactDTO: Codable {
     let birthday: Date?
     let updatedAt: Date
     let deletedAt: Date?
-    
+
     init(_ c: Contact) {
+        self.userId = c.userId
         self.clientId = c.clientId
         self.serverId = c.serverId
         self.name = c.name
@@ -386,6 +405,7 @@ struct ContactDTO: Codable {
 }
 
 struct TransactionDTO: Codable {
+    var userId: String?
     let clientId: String
     var serverId: String?
     /// 后端以字符串形式序列化 Decimal(避免 JS 浮点精度问题)
@@ -400,6 +420,7 @@ struct TransactionDTO: Codable {
     let deletedAt: Date?
 
     init(_ t: Transaction) {
+        self.userId = t.userId
         self.clientId = t.clientId
         self.serverId = t.serverId
         self.amount = "\(t.amount)"
@@ -415,6 +436,7 @@ struct TransactionDTO: Codable {
 }
 
 struct ReminderDTO: Codable {
+    var userId: String?
     let clientId: String
     var serverId: String?
     let title: String
@@ -426,8 +448,9 @@ struct ReminderDTO: Codable {
     let isEnabled: Bool
     let updatedAt: Date
     let deletedAt: Date?
-    
+
     init(_ r: Reminder) {
+        self.userId = r.userId
         self.clientId = r.clientId
         self.serverId = r.serverId
         self.title = r.title

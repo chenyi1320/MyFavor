@@ -11,14 +11,15 @@ import SwiftData
 struct HomeView: View {
     @Environment(\.modelContext) private var context
     @Query(sort: \LedgerBook.eventDate, order: .reverse) private var allBooks: [LedgerBook]
-    
+
     @State private var direction: Direction = .incoming
     @State private var searchText = ""
     @State private var showAddBook = false
-    
+
     private var books: [LedgerBook] {
-        allBooks.filter { $0.direction == direction &&
-            (searchText.isEmpty || $0.title.localizedCaseInsensitiveContains(searchText))
+        CurrentUserScope.visible(allBooks, keyPath: \.userId).filter { book in
+            book.direction == direction &&
+            (searchText.isEmpty || book.title.localizedCaseInsensitiveContains(searchText))
         }
     }
     

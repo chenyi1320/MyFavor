@@ -94,6 +94,7 @@ final class AuthService {
 
     // MARK: - 永久删除账号
     // 失败时也清 Keychain(后端可能已删成功,客户端需要同步状态)
+    // 成功后调用方(ProfileView)负责调用 LocalDataCleaner 清本机数据
     func deleteAccount() async throws {
         do {
             try await APIClient.shared.requestVoid("/account", method: .DELETE)
@@ -102,9 +103,14 @@ final class AuthService {
             KeychainHelper.shared.clearAll()
             currentUser = nil
             isLoggedIn = false
+            // 清掉该 user 的同步时间戳,避免同邮箱重新注册时漏拉
+            UserDefaults.standard.removeObject(forKey: "myfavor.lastSyncUserId")
             throw error
         }
+        // 成功路径:logout 会清 Keychain + 重置 in-memory 状态
         logout()
+        // 清掉 lastSyncUserId(否则下次同账号登录会复用旧 since,漏拉数据)
+        UserDefaults.standard.removeObject(forKey: "myfavor.lastSyncUserId")
     }
 }
 

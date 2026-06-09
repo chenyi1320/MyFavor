@@ -9,16 +9,21 @@ import SwiftData
 struct ContactsView: View {
     @Environment(\.modelContext) private var context
     @Query(sort: [SortDescriptor(\Contact.pinyinInitial), SortDescriptor(\Contact.name)])
-    private var contacts: [Contact]
-    
+    private var allContacts: [Contact]
+
     @State private var search = ""
     @State private var showAdd = false
-    
-    private var filtered: [Contact] {
-        guard !search.isEmpty else { return contacts }
-        return contacts.filter { $0.name.localizedCaseInsensitiveContains(search) }
+
+    private var contacts: [Contact] {
+        CurrentUserScope.visible(allContacts, keyPath: \.userId)
     }
-    
+
+    private var filtered: [Contact] {
+        let visible = contacts
+        guard !search.isEmpty else { return visible }
+        return visible.filter { $0.name.localizedCaseInsensitiveContains(search) }
+    }
+
     private var grouped: [(String, [Contact])] {
         let dict = Dictionary(grouping: filtered) { $0.pinyinInitial }
         return dict.sorted { $0.key < $1.key }

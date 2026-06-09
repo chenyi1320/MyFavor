@@ -31,6 +31,7 @@ final class Transaction: Syncable {
     // MARK: - 云同步字段(Syncable 协议)
     var clientId: String = UUID().uuidString
     var serverId: String?
+    var userId: String?
     var updatedAt: Date = Date()
     var isDirty: Bool = true
     var deletedAt: Date?
@@ -42,7 +43,8 @@ final class Transaction: Syncable {
         date: Date = .now,
         note: String = "",
         book: LedgerBook? = nil,
-        contact: Contact? = nil
+        contact: Contact? = nil,
+        userId: String? = nil
     ) {
         // 金额校验:非法时 fallback 为 0(避免负数/NaN/超大)
         self.amount = sanitizeAmount(amount) ?? 0
@@ -55,6 +57,7 @@ final class Transaction: Syncable {
         self.createdAt = .now
         self.updatedAt = .now
         self.clientId = UUID().uuidString
+        self.userId = Self.resolveUserId(userId)
         self.isDirty = true
     }
 }

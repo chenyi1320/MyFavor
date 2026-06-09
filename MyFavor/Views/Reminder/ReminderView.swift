@@ -10,9 +10,13 @@ import SwiftData
 
 struct ReminderView: View {
     @Environment(\.modelContext) private var context
-    @Query(sort: \Reminder.date) private var reminders: [Reminder]
+    @Query(sort: \Reminder.date) private var allReminders: [Reminder]
     @State private var showAdd = false
-    
+
+    private var reminders: [Reminder] {
+        CurrentUserScope.visible(allReminders, keyPath: \.userId)
+    }
+
     var body: some View {
         ZStack {
             Color.pageBackground.ignoresSafeArea()

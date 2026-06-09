@@ -9,12 +9,12 @@ import SwiftData
 struct AddTransactionSheet: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var context
-    @Query(sort: \LedgerBook.eventDate, order: .reverse) private var books: [LedgerBook]
-    @Query(sort: \Contact.name) private var contacts: [Contact]
-    
+    @Query(sort: \LedgerBook.eventDate, order: .reverse) private var allBooks: [LedgerBook]
+    @Query(sort: \Contact.name) private var allContacts: [Contact]
+
     /// 预选礼簿(从礼簿详情进入时传入)
     var book: LedgerBook?
-    
+
     @State private var selectedBook: LedgerBook?
     @State private var selectedContact: Contact?
     @State private var amount: Decimal? = nil
@@ -23,6 +23,13 @@ struct AddTransactionSheet: View {
     @State private var date: Date = .now
     @State private var note = ""
     @State private var showNewContact = false
+
+    private var books: [LedgerBook] {
+        CurrentUserScope.visible(allBooks, keyPath: \.userId)
+    }
+    private var contacts: [Contact] {
+        CurrentUserScope.visible(allContacts, keyPath: \.userId)
+    }
     
     var body: some View {
         NavigationStack {

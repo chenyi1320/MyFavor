@@ -15,6 +15,11 @@ enum SampleData {
         let bookCount = (try? context.fetchCount(FetchDescriptor<LedgerBook>())) ?? 0
         guard bookCount == 0 else { return }
 
+        // === v2.0:已登录用户不种样例数据 ===
+        // 已登录用户的初始内容应来自云端 pull,而不是本机种子
+        // 避免用户登录后看到不属于自己账号的假数据
+        guard !AuthService.shared.isLoggedIn else { return }
+
         // ===== 联系人 =====
         let zhangSan  = Contact(name: "张三",   pinyinInitial: "Z", phone: "13800138001", relationship: .friend,    avatarEmoji: "🧑")
         let liSi      = Contact(name: "李四",   pinyinInitial: "L", phone: "13800138002", relationship: .colleague, avatarEmoji: "👨")

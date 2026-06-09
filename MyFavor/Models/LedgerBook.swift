@@ -32,6 +32,7 @@ final class LedgerBook: Syncable {
     // MARK: - 云同步字段(Syncable 协议)
     var clientId: String = UUID().uuidString
     var serverId: String?
+    var userId: String?
     var updatedAt: Date = Date()
     var isDirty: Bool = true
     var deletedAt: Date?
@@ -49,7 +50,8 @@ final class LedgerBook: Syncable {
         eventDate: Date = .now,
         note: String = "",
         coverColorHex: String = "#2C5F4F",
-        isClosed: Bool = false
+        isClosed: Bool = false,
+        userId: String? = nil
     ) {
         self.title = truncate(title, max: SyncLimits.maxTitleLength)
         self.category = category
@@ -62,6 +64,7 @@ final class LedgerBook: Syncable {
         self.createdAt = .now
         self.updatedAt = .now
         self.clientId = UUID().uuidString
+        self.userId = Self.resolveUserId(userId)
         self.isDirty = true
     }
 
