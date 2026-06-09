@@ -94,7 +94,7 @@ struct ProfileView: View {
                     Text("""
                     将立即删除本机 \(s.count) 个其他账号的本地数据(共 \(s.books) 本礼簿、\(s.contacts) 位联系人、\(s.transactions) 笔来往、\(s.reminders) 条提醒)。
 
-    云端不受影响 — 这些账号下次在本机登录时可重新从云端拉取。
+                    云端不受影响 — 这些账号下次在本机登录时可重新从云端拉取。
                     """)
                 }
             }
