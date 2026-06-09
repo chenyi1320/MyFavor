@@ -73,6 +73,13 @@ jobs:
             # 2. 装依赖(用国内镜像,绕开 ECS 上可能存在的 ~/.npmrc 干扰)
             echo "📦 [2/6] 装依赖(国内镜像)..."
             cd backend
+            # ⚠️ 关键:替换 package-lock.json 里被污染的 resolved URL
+            # (ECS 上之前用 r.npmjs.one/r.npmjs.org 装的,这些域名 DNS 解析失败)
+            # 锁文件里的 resolved 字段优先级最高,--registry 参数盖不住
+            if [ -f package-lock.json ]; then
+              sed -i 's|http://r\.npmjs\.[a-z]*|https://registry.npmmirror.com|g' package-lock.json
+              echo "🔧 已修复 package-lock.json 里的坏 registry URL"
+            fi
             # 强制用国内 npm 镜像(registry.npmmirror.com,npmmirror 新域名)
             # --registry 直接传命令行参数,优先级最高,覆盖任何 .npmrc
             npm install --no-audit --registry=https://registry.npmmirror.com
